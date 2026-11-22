@@ -1,0 +1,16 @@
+{
+  "name": "blokarena",
+  "version": "1.0.0",
+  "description": "BLOKARENA",
+  "author": "BLOKARENA",
+  "main": "main.js",
+  "scripts": { "build": "electron-builder --win --publish never" },
+  "devDependencies": { "electron": "^33.0.0", "electron-builder": "^25.0.0" },
+  "build": {
+    "appId": "com.blokarena.game",
+    "productName": "BLOKARENA",
+    "files": ["index.html", "main.js", "three.min.js", "icon-512.png", "package.json"],
+    "win": { "target": "nsis", "icon": "icon-512.png" },
+    "nsis": { "oneClick": false, "allowToChangeInstallationDirectory": true }
+  }
+}
