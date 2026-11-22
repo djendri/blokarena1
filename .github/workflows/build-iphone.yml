@@ -1,0 +1,34 @@
+name: Build iPhone
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Build unsigned IPA
+        run: |
+          mkdir app && cd app
+          npm init -y
+          npm install @capacitor/core@6 @capacitor/cli@6 @capacitor/ios@6 three@0.128.0
+          mkdir www
+          cp ../index.html ../icon-192.png ../icon-512.png ../manifest.webmanifest www/
+          cp node_modules/three/build/three.min.js www/three.min.js
+          sed -i '' 's#https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js#three.min.js#' www/index.html
+          npx cap init BLOKARENA com.blokarena.game --web-dir www
+          npx cap add ios
+          npx cap sync ios
+          cd ios/App
+          xcodebuild -workspace App.xcworkspace -scheme App -configuration Release -sdk iphoneos -derivedDataPath build CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" build
+          mkdir Payload
+          cp -R build/Build/Products/Release-iphoneos/App.app Payload/
+          zip -r BLOKARENA.ipa Payload
+      - uses: actions/upload-artifact@v4
+        with:
+          name: BLOKARENA-iPhone
+          path: app/ios/App/BLOKARENA.ipa
