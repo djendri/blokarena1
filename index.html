@@ -8,27 +8,26 @@
   <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-user-select: none; }
-    html, body { width: 100%; height: 100%; overflow: hidden; background: #101820; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #fff; }
+    html, body { width: 100%; height: 100%; overflow: hidden; background: #0f172a; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #fff; }
     #game-canvas { position: fixed; inset: 0; width: 100%; height: 100%; display: block; z-index: 1; }
 
-    /* OVERLAYS & MENUS */
     .screen {
       position: fixed; inset: 0; z-index: 20;
       display: flex; flex-direction: column; align-items: center; justify-content: center;
-      background: radial-gradient(circle at center, rgba(24, 44, 66, 0.92), rgba(10, 16, 24, 0.98));
+      background: radial-gradient(circle at center, rgba(24, 44, 66, 0.93), rgba(10, 16, 24, 0.98));
       padding: 20px; text-align: center;
     }
     .hidden { display: none !important; }
 
     .logo {
-      font-size: clamp(2.4rem, 6vw, 4.4rem); font-weight: 900; letter-spacing: 4px;
-      color: #4ade80; text-shadow: 0 5px 0 #14532d, 0 12px 25px rgba(0,0,0,0.7);
+      font-size: clamp(2.3rem, 6vw, 4.3rem); font-weight: 900; letter-spacing: 4px;
+      color: #4ade80; text-shadow: 0 5px 0 #14532d, 0 12px 25px rgba(0,0,0,0.75);
       margin-bottom: 8px;
     }
-    .subtitle { color: #cbd5e1; font-size: 1rem; margin-bottom: 24px; max-width: 520px; }
+    .subtitle { color: #cbd5e1; font-size: 1rem; margin-bottom: 22px; max-width: 540px; }
 
     .lang-bar {
-      position: absolute; top: 16px; right: 16px; display: flex; gap: 6px; z-index: 30;
+      position: fixed; top: 14px; right: 14px; display: flex; gap: 6px; z-index: 30;
     }
     .lang-btn {
       background: rgba(255,255,255,0.12); border: 2px solid rgba(255,255,255,0.25);
@@ -37,14 +36,14 @@
     .lang-btn.active { background: #22c55e; border-color: #86efac; color: #052e16; }
 
     .card {
-      background: rgba(15, 23, 42, 0.9); border: 2px solid #334155;
-      border-radius: 16px; padding: 22px; width: 100%; max-width: 440px;
+      background: rgba(15, 23, 42, 0.92); border: 2px solid #334155;
+      border-radius: 16px; padding: 22px; width: 100%; max-width: 450px;
       box-shadow: 0 20px 50px rgba(0,0,0,0.65);
     }
     .btn {
-      width: 100%; padding: 13px 18px; margin: 7px 0;
-      border: none; border-radius: 10px; font-size: 1.05rem; font-weight: 800;
-      cursor: pointer; transition: transform 0.1s, filter 0.15s;
+      width: 100%; padding: 12px 16px; margin: 6px 0;
+      border: none; border-radius: 10px; font-size: 1.02rem; font-weight: 800;
+      cursor: pointer; transition: transform 0.1s;
       color: #fff; background: #2563eb; box-shadow: 0 4px 0 #1e3a8a;
     }
     .btn:active { transform: translateY(2px); }
@@ -54,17 +53,16 @@
     .btn.red { background: #dc2626; box-shadow: 0 4px 0 #7f1d1d; }
 
     .input-box {
-      width: 100%; padding: 12px; margin: 8px 0; border-radius: 10px;
+      width: 100%; padding: 11px; margin: 7px 0; border-radius: 10px;
       border: 2px solid #475569; background: #0f172a; color: #fff;
-      font-size: 1.05rem; text-align: center; font-weight: 700;
+      font-size: 1rem; text-align: center; font-weight: 700;
     }
     .code-display {
-      font-size: 1.8rem; font-weight: 900; letter-spacing: 5px;
+      font-size: 1.75rem; font-weight: 900; letter-spacing: 5px;
       background: #020617; border: 2px dashed #4ade80; color: #4ade80;
-      padding: 12px; border-radius: 10px; margin: 10px 0;
+      padding: 11px; border-radius: 10px; margin: 10px 0;
     }
 
-    /* HUD */
     #hud { position: fixed; inset: 0; z-index: 10; pointer-events: none; }
     #crosshair {
       position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
@@ -81,48 +79,46 @@
       display: flex; justify-content: space-between; align-items: flex-start; gap: 10px;
     }
     .hud-panel {
-      background: rgba(15, 23, 42, 0.78); border: 2px solid rgba(255,255,255,0.18);
+      background: rgba(15, 23, 42, 0.8); border: 2px solid rgba(255,255,255,0.18);
       border-radius: 12px; padding: 8px 14px; pointer-events: auto;
     }
-    .hearts { font-size: 1.25rem; letter-spacing: 2px; color: #ef4444; }
-    .stats-line { font-size: 0.9rem; color: #e2e8f0; margin-top: 3px; font-weight: 700; }
+    .hearts { font-size: 1.2rem; letter-spacing: 2px; }
+    .stats-line { font-size: 0.88rem; color: #e2e8f0; margin-top: 3px; font-weight: 700; }
 
-    /* HOTBAR */
     .hotbar {
       position: fixed; bottom: 14px; left: 50%; transform: translateX(-50%);
-      display: flex; gap: 6px; background: rgba(15, 23, 42, 0.85);
+      display: flex; gap: 6px; background: rgba(15, 23, 42, 0.88);
       padding: 7px; border-radius: 14px; border: 2px solid #475569; pointer-events: auto;
     }
     .slot {
-      width: 54px; height: 54px; border-radius: 10px; border: 2px solid #334155;
+      width: 52px; height: 52px; border-radius: 10px; border: 2px solid #334155;
       background: rgba(30, 41, 59, 0.9); display: flex; flex-direction: column;
       align-items: center; justify-content: center; cursor: pointer; position: relative;
-      font-size: 1.35rem;
+      font-size: 1.3rem;
     }
-    .slot.active { border-color: #4ade80; background: rgba(22, 101, 52, 0.65); transform: translateY(-3px); }
+    .slot.active { border-color: #4ade80; background: rgba(22, 101, 52, 0.7); transform: translateY(-3px); }
     .slot-count {
-      position: absolute; bottom: 2px; right: 5px; font-size: 0.72rem;
+      position: absolute; bottom: 2px; right: 4px; font-size: 0.7rem;
       font-weight: 800; color: #f8fafc; text-shadow: 1px 1px 2px #000;
     }
     .slot-key {
       position: absolute; top: 2px; left: 5px; font-size: 0.65rem; color: #94a3b8;
     }
 
-    /* TOUCH CONTROLS FOR MOBILE/TABLET */
     .touch-controls {
       position: fixed; bottom: 82px; left: 16px; right: 16px;
       display: flex; justify-content: space-between; pointer-events: none;
     }
     .dpad, .action-pad { display: flex; gap: 8px; pointer-events: auto; }
     .t-btn {
-      width: 52px; height: 52px; border-radius: 50%; border: 2px solid rgba(255,255,255,0.35);
-      background: rgba(15, 23, 42, 0.72); color: #fff; font-weight: 900; font-size: 1.1rem;
+      width: 50px; height: 50px; border-radius: 50%; border: 2px solid rgba(255,255,255,0.35);
+      background: rgba(15, 23, 42, 0.75); color: #fff; font-weight: 900; font-size: 1.05rem;
       display: flex; align-items: center; justify-content: center;
     }
 
     #toast {
-      position: fixed; top: 75px; left: 50%; transform: translateX(-50%);
-      background: rgba(15, 23, 42, 0.92); border: 2px solid #4ade80;
+      position: fixed; top: 76px; left: 50%; transform: translateX(-50%);
+      background: rgba(15, 23, 42, 0.94); border: 2px solid #4ade80;
       padding: 8px 18px; border-radius: 999px; font-weight: 700; z-index: 25;
       opacity: 0; transition: opacity 0.25s; pointer-events: none;
     }
@@ -133,7 +129,6 @@
 
 <canvas id="game-canvas"></canvas>
 
-<!-- LANGUAGE SWITCHER -->
 <div class="lang-bar">
   <button class="lang-btn active" onclick="setLang('sq')">SQ</button>
   <button class="lang-btn" onclick="setLang('de')">DE</button>
@@ -144,26 +139,26 @@
 <!-- MAIN MENU -->
 <div id="menu-main" class="screen">
   <div class="logo">BLOKARENA</div>
-  <div class="subtitle" data-i18n="subtitle">Ndërto, gërmo në shpellë, hap kutitë dhe mbijeto kundër përbindëshave!</div>
+  <div class="subtitle" data-i18n="subtitle">Ndërto, gërmo në shpellë, hap 4 kutitë dhe mbijeto kundër përbindëshave!</div>
   <div class="card">
     <input id="player-name" class="input-box" maxlength="14" placeholder="Emri i lojtarit..." value="Lojtari1" />
     <button class="btn green" onclick="startSinglePlayer()" data-i18n="btn_single">Luaj Vetëm (Me Kundërshtarë)</button>
     <button class="btn" onclick="openGroupMenu()" data-i18n="btn_group">Luaj në Grup (Me Kod)</button>
     <button class="btn orange" onclick="toggleHelp()" data-i18n="btn_help">Kontrollet & Rregullat</button>
-    <div id="help-box" class="hidden" style="margin-top:12px; font-size:0.88rem; color:#cbd5e1; text-align:left; line-height:1.45;">
-      <p data-i18n="help_text">• WASD / Shigjetat: Lëviz | Space: Kërce | Kliko / E: Sulmo, Hap Kuti ose Gërmo<br>• 1-6: Zgjidh mjetin (Shpatë, Kazmë, Mollë e Artë, Perlë, TNT, Bllok)<br>• R: Krijo / Riparo mjetet | Gjej 4 kutitë dhe diamantet në shpellë!</p>
+    <div id="help-box" class="hidden" style="margin-top:12px; font-size:0.86rem; color:#cbd5e1; text-align:left; line-height:1.45;">
+      <p data-i18n="help_text">• WASD / Shigjetat: Lëviz | Space: Kërce | Kliko / E: Sulmo, Hap Kuti, Piq Mish ose Gërmo<br>• 1-7: Shpatë, Kazmë, Mollë e Artë (+2 Zemra), Perlë, TNT, Bllok, Kovë Uji<br>• Gjej 4 kutitë (përmbajnë Lëng të Verdhë që riparon shpatën 100%) dhe shpellën!</p>
     </div>
   </div>
 </div>
 
-<!-- GROUP LOBBY MENU -->
+<!-- GROUP LOBBY -->
 <div id="menu-group" class="screen hidden">
-  <div class="logo" style="font-size:2.4rem;" data-i18n="group_title">GRUP ME KOD</div>
+  <div class="logo" style="font-size:2.3rem;" data-i18n="group_title">GRUP ME KOD</div>
   <div class="card">
     <p style="color:#94a3b8; font-size:0.9rem;" data-i18n="your_code_lbl">Kodi yt i dhomës:</p>
     <div id="room-code-text" class="code-display">----</div>
     <button class="btn green" onclick="hostGroupGame()" data-i18n="btn_host">Krijo Dhomë & Fillo</button>
-    <hr style="border-color:#334155; margin:14px 0;">
+    <hr style="border-color:#334155; margin:12px 0;">
     <input id="join-code-input" class="input-box" maxlength="8" placeholder="Shkruaj kodin e shokut..." />
     <button class="btn" onclick="joinGroupGame()" data-i18n="btn_join">Hyr me Kod</button>
     <div id="group-status" style="margin-top:8px; font-size:0.88rem; color:#4ade80;"></div>
@@ -171,7 +166,7 @@
   </div>
 </div>
 
-<!-- GAME OVER / LEVEL UP SCREEN -->
+<!-- GAME OVER -->
 <div id="menu-gameover" class="screen hidden">
   <div class="logo" style="color:#ef4444;" data-i18n="game_over">LOJA MBAROI!</div>
   <div class="card">
@@ -189,7 +184,7 @@
   <div class="top-bar">
     <div class="hud-panel">
       <div id="hearts-display" class="hearts">❤️❤️❤️❤️❤️</div>
-      <div id="stats-display" class="stats-line">Niveli: 1 | Pikë: 0 | ☀️ Ditë</div>
+      <div id="stats-display" class="stats-line">Niveli: 1 | Pikë: 0 | 🔥 Qymyr: 2 | ☀️ Ditë</div>
     </div>
     <div class="hud-panel" style="display:flex; gap:8px; align-items:center;">
       <span id="room-badge" style="font-size:0.85rem; color:#4ade80; font-weight:800;"></span>
@@ -197,7 +192,6 @@
     </div>
   </div>
 
-  <!-- HOTBAR -->
   <div class="hotbar" id="hotbar">
     <div class="slot active" onclick="selectSlot(0)"><span class="slot-key">1</span>⚔️<span id="cnt-0" class="slot-count">100%</span></div>
     <div class="slot" onclick="selectSlot(1)"><span class="slot-key">2</span>⛏️<span id="cnt-1" class="slot-count">1</span></div>
@@ -205,9 +199,9 @@
     <div class="slot" onclick="selectSlot(3)"><span class="slot-key">4</span>🔮<span id="cnt-3" class="slot-count">2</span></div>
     <div class="slot" onclick="selectSlot(4)"><span class="slot-key">5</span>🧨<span id="cnt-4" class="slot-count">1</span></div>
     <div class="slot" onclick="selectSlot(5)"><span class="slot-key">6</span>🧱<span id="cnt-5" class="slot-count">12</span></div>
+    <div class="slot" onclick="selectSlot(6)"><span class="slot-key">7</span>🪣<span id="cnt-6" class="slot-count">1</span></div>
   </div>
 
-  <!-- MOBILE/QUICK ACTION BUTTONS -->
   <div class="touch-controls">
     <div class="dpad">
       <button class="t-btn" ontouchstart="keys['KeyA']=true" ontouchend="keys['KeyA']=false">◀</button>
@@ -217,20 +211,19 @@
     </div>
     <div class="action-pad">
       <button class="t-btn" onclick="jumpPlayer()">⬆</button>
-      <button class="t-btn" style="background:rgba(220,38,38,0.8);" onclick="performPrimaryAction()">⚔️</button>
+      <button class="t-btn" style="background:rgba(220,38,38,0.85);" onclick="performPrimaryAction()">⚔️</button>
     </div>
   </div>
 </div>
 
 <script>
-// ================= LOCALIZATION (SQ / DE / EN / TR) =================
 const I18N = {
   sq: {
-    subtitle: "Ndërto, gërmo në shpellë, hap kutitë dhe mbijeto kundër përbindëshave!",
+    subtitle: "Ndërto, gërmo në shpellë, hap 4 kutitë dhe mbijeto kundër përbindëshave!",
     btn_single: "Luaj Vetëm (Me Kundërshtarë)",
     btn_group: "Luaj në Grup (Me Kod)",
     btn_help: "Kontrollet & Rregullat",
-    help_text: "• WASD / Shigjetat: Lëviz | Space: Kërce | Kliko / E: Sulmo, Hap Kuti ose Gërmo<br>• 1-6: Zgjidh mjetin (Shpatë, Kazmë, Mollë e Artë, Perlë, TNT, Bllok)<br>• Kërko 4 kutitë e fshehura dhe shpellën për diamante & lëng të verdhë!",
+    help_text: "• WASD / Shigjetat: Lëviz | Space: Kërce | Kliko / E: Sulmo, Hap Kuti, Piq Mish ose Gërmo<br>• 1-7: Shpatë, Kazmë, Mollë e Artë (+2 Zemra), Perlë, TNT, Bllok, Kovë Uji<br>• Gjej 4 kutitë (përmbajnë Lëng të Verdhë që riparon shpatën 100%) dhe shpellën!",
     group_title: "GRUP ME KOD",
     your_code_lbl: "Kodi yt i dhomës:",
     btn_host: "Krijo Dhomë & Fillo",
@@ -239,18 +232,19 @@ const I18N = {
     game_over: "LOJA MBAROI!",
     btn_restart: "Luaj Përsëri",
     btn_exit: "Dil",
-    lvl: "Niveli", pts: "Pikë", day: "Ditë", night: "Natë",
-    chest_opened: "Hape një kuti! Gjete shpërblime!",
+    lvl: "Niveli", pts: "Pikë", coal: "Qymyr", day: "Ditë", night: "Natë",
+    chest_opened: "Kutia u hap! Gjete Lëng të Verdhë (shpata 100%) & sende!",
     golden_apple: "Hëngre Mollë të Artë! +2 Zemra ekstra!",
-    juice_used: "Shpata u riparua 100% me Lëng të Verdhë!",
+    cooked_meat: "Pjeke mishin me qymyr! +2 Zemra!",
+    water_placed: "Hodhe ujë nga kova!",
     level_up: "URIME! Kalove në Nivelin "
   },
   de: {
-    subtitle: "Baue, grabe in der Höhle, öffne Truhen und überlebe gegen Monster!",
+    subtitle: "Baue, grabe in der Höhle, öffne 4 Truhen und überlebe gegen Monster!",
     btn_single: "Allein Spielen (Mit Gegnern)",
     btn_group: "Gruppe mit Code",
     btn_help: "Steuerung & Regeln",
-    help_text: "• WASD / Pfeile: Bewegen | Leertaste: Springen | Klick / E: Angreifen, Truhe öffnen, Graben<br>• 1-6: Werkzeug wählen (Schwert, Spitzhacke, Goldapfel, Perle, TNT, Block)<br>• Finde die 4 Truhen und die Höhle für Diamanten!",
+    help_text: "• WASD / Pfeile: Bewegen | Leertaste: Springen | Klick / E: Angreifen, Truhe, Ofen, Graben<br>• 1-7: Schwert, Spitzhacke, Goldapfel (+2 Herzen), Perle, TNT, Block, Wassereimer<br>• Finde die 4 Truhen (mit gelbem Trank für 100% Schwert) und die Höhle!",
     group_title: "GRUPPE MIT CODE",
     your_code_lbl: "Dein Raum-Code:",
     btn_host: "Raum Erstellen & Starten",
@@ -259,18 +253,19 @@ const I18N = {
     game_over: "SPIEL VORBEI!",
     btn_restart: "Nochmal Spielen",
     btn_exit: "Beenden",
-    lvl: "Level", pts: "Punkte", day: "Tag", night: "Nacht",
-    chest_opened: "Truhe geöffnet! Belohnung erhalten!",
+    lvl: "Level", pts: "Punkte", coal: "Kohle", day: "Tag", night: "Nacht",
+    chest_opened: "Truhe geöffnet! Gelber Trank (100% Schwert) + Beute!",
     golden_apple: "Goldener Apfel gegessen! +2 Extra-Herzen!",
-    juice_used: "Schwert mit gelbem Trank auf 100% repariert!",
+    cooked_meat: "Fleisch mit Kohle gebraten! +2 Herzen!",
+    water_placed: "Wasser aus dem Eimer gegossen!",
     level_up: "GLÜCKWUNSCH! Neues Level: "
   },
   en: {
-    subtitle: "Build, mine in the cave, open chests and survive against monsters!",
+    subtitle: "Build, mine in the cave, open 4 chests and survive against monsters!",
     btn_single: "Single Player (With Opponents)",
     btn_group: "Play in Group (Room Code)",
     btn_help: "Controls & Rules",
-    help_text: "• WASD / Arrows: Move | Space: Jump | Click / E: Attack, Open Chest or Mine<br>• 1-6: Select item (Sword, Pickaxe, Golden Apple, Ender Pearl, TNT, Block)<br>• Find the 4 hidden chests and the cave for diamonds!",
+    help_text: "• WASD / Arrows: Move | Space: Jump | Click / E: Attack, Chest, Furnace, Mine<br>• 1-7: Sword, Pickaxe, Golden Apple (+2 Hearts), Pearl, TNT, Block, Water Bucket<br>• Find the 4 chests (Yellow Juice repairs sword 100%) and the cave!",
     group_title: "GROUP WITH CODE",
     your_code_lbl: "Your Room Code:",
     btn_host: "Create Room & Start",
@@ -279,18 +274,19 @@ const I18N = {
     game_over: "GAME OVER!",
     btn_restart: "Play Again",
     btn_exit: "Exit",
-    lvl: "Level", pts: "Score", day: "Day", night: "Night",
-    chest_opened: "Chest opened! Found loot!",
+    lvl: "Level", pts: "Score", coal: "Coal", day: "Day", night: "Night",
+    chest_opened: "Chest opened! Found Yellow Juice (100% sword) & loot!",
     golden_apple: "Ate Golden Apple! +2 Extra Hearts!",
-    juice_used: "Sword repaired to 100% with Yellow Juice!",
+    cooked_meat: "Cooked meat with coal! +2 Hearts!",
+    water_placed: "Placed water from bucket!",
     level_up: "LEVEL UP! Reached Level "
   },
   tr: {
-    subtitle: "İnşa et, mağarada kazı yap, sandıkları aç ve canavarlara karşı hayatta kal!",
+    subtitle: "İnşa et, mağarada kazı yap, 4 sandığı aç ve canavarlara karşı hayatta kal!",
     btn_single: "Tek Oyna (Rakiplerle)",
     btn_group: "Kod ile Grup Oyunu",
     btn_help: "Kontroller ve Kurallar",
-    help_text: "• WASD / Oklar: Hareket | Boşluk: Zıpla | Tıkla / E: Saldır, Sandık Aç veya Kaz<br>• 1-6: Eşya seç (Kılıç, Kazma, Altın Elma, İnci, TNT, Blok)<br>• Elmaslar için 4 sandığı ve mağarayı bul!",
+    help_text: "• WASD / Oklar: Hareket | Boşluk: Zıpla | Tıkla / E: Saldır, Sandık, Fırın, Kaz<br>• 1-7: Kılıç, Kazma, Altın Elma (+2 Kalp), İnci, TNT, Blok, Su Kovası<br>• 4 sandığı (Sarı İksir kılıcı %100 onarır) ve mağarayı bul!",
     group_title: "KOD İLE GRUP",
     your_code_lbl: "Oda Kodun:",
     btn_host: "Oda Oluştur ve Başla",
@@ -299,10 +295,11 @@ const I18N = {
     game_over: "OYUN BİTTİ!",
     btn_restart: "Tekrar Oyna",
     btn_exit: "Çıkış",
-    lvl: "Seviye", pts: "Puan", day: "Gündüz", night: "Gece",
-    chest_opened: "Sandık açıldı! Ödüller bulundu!",
+    lvl: "Seviye", pts: "Puan", coal: "Kömür", day: "Gündüz", night: "Gece",
+    chest_opened: "Sandık açıldı! Sarı İksir (%100 kılıç) ve eşyalar bulundu!",
     golden_apple: "Altın Elma yendi! +2 Ekstra Kalp!",
-    juice_used: "Kılıç Sarı İksir ile %100 onarıldı!",
+    cooked_meat: "Kömürle et pişti! +2 Kalp!",
+    water_placed: "Kovadan su döküldü!",
     level_up: "TEBRİKLER! Yeni Seviye: "
   }
 };
@@ -325,7 +322,6 @@ function showToast(msg) {
   setTimeout(() => t.classList.remove('show'), 2600);
 }
 
-// ================= MENU NAVIGATION =================
 function hideAllScreens() {
   document.getElementById('menu-main').classList.add('hidden');
   document.getElementById('menu-group').classList.add('hidden');
@@ -340,19 +336,10 @@ function backToMainMenu() {
   document.getElementById('menu-main').classList.remove('hidden');
 }
 
-function exitToMenu() {
-  backToMainMenu();
-}
+function exitToMenu() { backToMainMenu(); }
+function toggleHelp() { document.getElementById('help-box').classList.toggle('hidden'); }
 
-function toggleHelp() {
-  document.getElementById('help-box').classList.toggle('hidden');
-}
-
-// ================= MULTIPLAYER (PEERJS ROOM CODE) =================
-let peer = null;
-let connections = [];
-let myRoomCode = '';
-let remotePlayers = {};
+let peer = null, connections = [], myRoomCode = '', remotePlayers = {};
 
 function openGroupMenu() {
   hideAllScreens();
@@ -409,46 +396,31 @@ function handleNetData(peerId, data) {
   }
 }
 
-// ================= THREE.JS 3D WORLD & GAME ENGINE =================
-let scene, camera, renderer;
-let gameRunning = false;
-let clock = new THREE.Clock();
+let scene, camera, renderer, gameRunning = false, clock = new THREE.Clock();
 
 const player = {
-  pos: new THREE.Vector3(0, 2, 12),
+  pos: new THREE.Vector3(0, 1.7, 14),
   vel: new THREE.Vector3(),
-  yaw: 0, pitch: 0,
-  onGround: false,
+  yaw: 0, pitch: 0, onGround: false,
   hp: 5, maxHp: 5,
   score: 0, level: 1,
+  coal: 2, rawMeat: 2,
   selectedSlot: 0,
   swordDurability: 100,
-  pickaxes: 1,
-  goldenApples: 1,
-  enderPearls: 2,
-  tnt: 1,
-  blocks: 12,
-  diamonds: 0
+  pickaxes: 1, goldenApples: 1, enderPearls: 2, tnt: 1, blocks: 12, waterBuckets: 1
 };
 
-let worldObjects = [];
-let chests = [];
-let caveOres = [];
-let enemies = [];
-let placedBlocks = [];
-let dayTime = 0;
-let keys = {};
+let chests = [], caveOres = [], enemies = [], furnaceMesh = null, dayTime = 0, keys = {};
 
 function initThree() {
   const canvas = document.getElementById('game-canvas');
   scene = new THREE.Scene();
   scene.background = new THREE.Color(0x7dd3fc);
-  scene.fog = new THREE.Fog(0x7dd3fc, 25, 110);
+  scene.fog = new THREE.Fog(0x7dd3fc, 25, 115);
 
   camera = new THREE.PerspectiveCamera(72, window.innerWidth / window.innerHeight, 0.1, 200);
   renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
   renderer.setSize(window.innerWidth, window.innerHeight);
-  renderer.shadowMap.enabled = true;
 
   window.addEventListener('resize', () => {
     camera.aspect = window.innerWidth / window.innerHeight;
@@ -463,18 +435,12 @@ function createHumanoidMesh(shirtColor, pantsColor, isMonster = false) {
   const matBody = new THREE.MeshLambertMaterial({ color: shirtColor });
   const matLegs = new THREE.MeshLambertMaterial({ color: pantsColor });
 
-  const head = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.7, 0.7), matHead);
-  head.position.y = 1.75;
-  const body = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.9, 0.45), matBody);
-  body.position.y = 0.95;
-  const legL = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.7, 0.35), matLegs);
-  legL.position.set(-0.2, 0.35, 0);
-  const legR = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.7, 0.35), matLegs);
-  legR.position.set(0.2, 0.35, 0);
-  const armL = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.8, 0.3), matBody);
-  armL.position.set(-0.6, 1.0, 0);
-  const armR = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.8, 0.3), matBody);
-  armR.position.set(0.6, 1.0, 0);
+  const head = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.7, 0.7), matHead); head.position.y = 1.75;
+  const body = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.9, 0.45), matBody); body.position.y = 0.95;
+  const legL = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.7, 0.35), matLegs); legL.position.set(-0.2, 0.35, 0);
+  const legR = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.7, 0.35), matLegs); legR.position.set(0.2, 0.35, 0);
+  const armL = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.8, 0.3), matBody); armL.position.set(-0.6, 1.0, 0);
+  const armR = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.8, 0.3), matBody); armR.position.set(0.6, 1.0, 0);
 
   group.add(head, body, legL, legR, armL, armR);
   return group;
@@ -482,81 +448,58 @@ function createHumanoidMesh(shirtColor, pantsColor, isMonster = false) {
 
 function buildArenaWorld() {
   while (scene.children.length > 0) scene.remove(scene.children[0]);
-  chests = [];
-  caveOres = [];
-  enemies = [];
-  placedBlocks = [];
-  remotePlayers = {};
+  chests = []; caveOres = []; enemies = []; remotePlayers = {};
 
-  // Lights
-  const hemi = new THREE.HemisphereLight(0xffffff, 0x334155, 0.9);
-  scene.add(hemi);
+  scene.add(new THREE.HemisphereLight(0xffffff, 0x334155, 0.9));
   const sun = new THREE.DirectionalLight(0xfffbeb, 0.9);
   sun.position.set(30, 50, 25);
   scene.add(sun);
 
-  // Ground (Grass Arena)
-  const ground = new THREE.Mesh(
-    new THREE.BoxGeometry(120, 2, 120),
-    new THREE.MeshLambertMaterial({ color: 0x22c55e })
-  );
+  const ground = new THREE.Mesh(new THREE.BoxGeometry(120, 2, 120), new THREE.MeshLambertMaterial({ color: 0x22c55e }));
   ground.position.y = -1;
   scene.add(ground);
 
-  // Swimming Lake
-  const lake = new THREE.Mesh(
-    new THREE.BoxGeometry(22, 0.3, 18),
-    new THREE.MeshLambertMaterial({ color: 0x0ea5e9, transparent: true, opacity: 0.82 })
-  );
+  const lake = new THREE.Mesh(new THREE.BoxGeometry(22, 0.3, 18), new THREE.MeshLambertMaterial({ color: 0x0ea5e9, transparent: true, opacity: 0.82 }));
   lake.position.set(-22, 0.05, -14);
   scene.add(lake);
 
-  // Cave Mountain with Mining Ores
-  const caveMat = new THREE.MeshLambertMaterial({ color: 0x475569 });
-  const wallLeft = new THREE.Mesh(new THREE.BoxGeometry(6, 10, 22), caveMat);
-  wallLeft.position.set(22, 5, -15);
-  const wallRight = new THREE.Mesh(new THREE.BoxGeometry(6, 10, 22), caveMat);
-  wallRight.position.set(36, 5, -15);
-  const caveRoof = new THREE.Mesh(new THREE.BoxGeometry(20, 4, 22), caveMat);
-  caveRoof.position.set(29, 10, -15);
-  const caveBack = new THREE.Mesh(new THREE.BoxGeometry(20, 10, 4), caveMat);
-  caveBack.position.set(29, 5, -25);
-  scene.add(wallLeft, wallRight, caveRoof, caveBack);
+  // Furnace near spawn
+  furnaceMesh = new THREE.Mesh(new THREE.BoxGeometry(1.5, 1.5, 1.5), new THREE.MeshLambertMaterial({ color: 0x334155 }));
+  furnaceMesh.position.set(4, 0.75, 8);
+  scene.add(furnaceMesh);
 
-  // Ores inside Cave (Diamond, Gold, Iron)
+  // Cave
+  const caveMat = new THREE.MeshLambertMaterial({ color: 0x475569 });
+  const wL = new THREE.Mesh(new THREE.BoxGeometry(6, 10, 22), caveMat); wL.position.set(22, 5, -15);
+  const wR = new THREE.Mesh(new THREE.BoxGeometry(6, 10, 22), caveMat); wR.position.set(36, 5, -15);
+  const roof = new THREE.Mesh(new THREE.BoxGeometry(20, 4, 22), caveMat); roof.position.set(29, 10, -15);
+  const back = new THREE.Mesh(new THREE.BoxGeometry(20, 10, 4), caveMat); back.position.set(29, 5, -25);
+  scene.add(wL, wR, roof, back);
+
   const oreTypes = [
     { color: 0x38bdf8, type: 'diamond', pts: 50 },
     { color: 0xfacc15, type: 'gold', pts: 30 },
-    { color: 0xd1d5db, type: 'iron', pts: 20 }
+    { color: 0x1e293b, type: 'coal', pts: 20 }
   ];
   for (let i = 0; i < 9; i++) {
     const ot = oreTypes[i % 3];
-    const ore = new THREE.Mesh(
-      new THREE.BoxGeometry(1.4, 1.4, 1.4),
-      new THREE.MeshLambertMaterial({ color: ot.color })
-    );
+    const ore = new THREE.Mesh(new THREE.BoxGeometry(1.4, 1.4, 1.4), new THREE.MeshLambertMaterial({ color: ot.color }));
     ore.position.set(26 + (i % 3) * 3, 1.2 + Math.floor(i / 3) * 1.6, -21);
-    ore.userData = { kind: 'ore', oreType: ot.type, pts: ot.pts };
+    ore.userData = { oreType: ot.type, pts: ot.pts };
     scene.add(ore);
     caveOres.push(ore);
   }
 
-  // 4 Loot Chests around the map
-  const chestCoords = [
-    [10, 0.6, 8], [-12, 0.6, 10], [28, 0.6, -12], [-16, 0.6, -26]
-  ];
+  // 4 Chests
+  const chestCoords = [[10, 0.6, 8], [-12, 0.6, 10], [29, 0.6, -15], [-16, 0.6, -26]];
   chestCoords.forEach(([x, y, z]) => {
-    const chest = new THREE.Mesh(
-      new THREE.BoxGeometry(1.4, 1.1, 1.1),
-      new THREE.MeshLambertMaterial({ color: 0xb45309 })
-    );
+    const chest = new THREE.Mesh(new THREE.BoxGeometry(1.4, 1.1, 1.1), new THREE.MeshLambertMaterial({ color: 0xb45309 }));
     chest.position.set(x, y, z);
-    chest.userData = { kind: 'chest', opened: false };
+    chest.userData = { opened: false };
     scene.add(chest);
     chests.push(chest);
   });
 
-  // Spawn Initial Enemies (Warriors & Monsters)
   spawnWave(player.level);
 }
 
@@ -564,26 +507,15 @@ function spawnWave(lvl) {
   const count = 3 + lvl * 2;
   for (let i = 0; i < count; i++) {
     const isMonster = i % 2 === 0;
-    const mesh = createHumanoidMesh(
-      isMonster ? 0x15803d : 0xdc2626,
-      isMonster ? 0x1e3a8a : 0x1f2937,
-      isMonster
-    );
+    const mesh = createHumanoidMesh(isMonster ? 0x15803d : 0xdc2626, isMonster ? 0x1e3a8a : 0x1f2937, isMonster);
     const angle = (Math.PI * 2 * i) / count;
     const dist = 20 + Math.random() * 18;
     mesh.position.set(Math.cos(angle) * dist, 0, Math.sin(angle) * dist);
     scene.add(mesh);
-    enemies.push({
-      mesh,
-      hp: 2 + lvl,
-      speed: 2.4 + lvl * 0.25,
-      isMonster,
-      attackCooldown: 0
-    });
+    enemies.push({ mesh, hp: 2 + lvl, speed: 2.4 + lvl * 0.25, attackCooldown: 0 });
   }
 }
 
-// ================= GAME START & CONTROLS =================
 function startSinglePlayer() {
   document.getElementById('room-badge').textContent = 'SOLO';
   startGameWorld();
@@ -598,12 +530,9 @@ function startGameWorld() {
   player.yaw = 0; player.pitch = 0;
   player.hp = 5; player.maxHp = 5;
   player.score = 0; player.level = 1;
+  player.coal = 2; player.rawMeat = 2;
   player.swordDurability = 100;
-  player.pickaxes = 1;
-  player.goldenApples = 1;
-  player.enderPearls = 2;
-  player.tnt = 1;
-  player.blocks = 12;
+  player.pickaxes = 1; player.goldenApples = 1; player.enderPearls = 2; player.tnt = 1; player.blocks = 12; player.waterBuckets = 1;
 
   buildArenaWorld();
   selectSlot(0);
@@ -614,9 +543,7 @@ function startGameWorld() {
   if (canvas.requestPointerLock) canvas.requestPointerLock();
 }
 
-function restartGame() {
-  startGameWorld();
-}
+function restartGame() { startGameWorld(); }
 
 function selectSlot(idx) {
   player.selectedSlot = idx;
@@ -631,7 +558,7 @@ function updateHUD() {
 
   const isNight = Math.sin(dayTime) < 0;
   document.getElementById('stats-display').textContent =
-    `${t.lvl}: ${player.level} | ${t.pts}: ${player.score} | ${isNight ? '🌙 ' + t.night : '☀️ ' + t.day}`;
+    `${t.lvl}: ${player.level} | ${t.pts}: ${player.score} | 🔥 ${t.coal}: ${player.coal} | ${isNight ? '🌙 ' + t.night : '☀️ ' + t.day}`;
 
   document.getElementById('cnt-0').textContent = player.swordDurability + '%';
   document.getElementById('cnt-1').textContent = player.pickaxes;
@@ -639,13 +566,11 @@ function updateHUD() {
   document.getElementById('cnt-3').textContent = player.enderPearls;
   document.getElementById('cnt-4').textContent = player.tnt;
   document.getElementById('cnt-5').textContent = player.blocks;
+  document.getElementById('cnt-6').textContent = player.waterBuckets;
 }
 
 function jumpPlayer() {
-  if (player.onGround) {
-    player.vel.y = 8.5;
-    player.onGround = false;
-  }
+  if (player.onGround) { player.vel.y = 8.5; player.onGround = false; }
 }
 
 function performPrimaryAction() {
@@ -653,84 +578,87 @@ function performPrimaryAction() {
   const t = I18N[currentLang];
   const forward = new THREE.Vector3(-Math.sin(player.yaw), 0, -Math.cos(player.yaw));
 
-  // 1. Check nearby chests first
+  // Chests
   for (const c of chests) {
-    if (!c.userData.opened && c.position.distanceTo(player.pos) < 3.5) {
+    if (!c.userData.opened && c.position.distanceTo(player.pos) < 3.6) {
       c.userData.opened = true;
       c.material.color.setHex(0x64748b);
       player.swordDurability = 100;
       player.goldenApples += 1;
       player.enderPearls += 1;
       player.tnt += 1;
-      player.blocks += 6;
+      player.coal += 1;
       player.score += 25;
-      showToast(t.chest_opened + ' (' + t.juice_used + ')');
+      showToast(t.chest_opened);
       updateHUD();
       return;
     }
   }
 
-  // 2. Slot-based items
+  // Furnace
+  if (furnaceMesh && furnaceMesh.position.distanceTo(player.pos) < 3.6 && player.coal > 0 && player.rawMeat > 0) {
+    player.coal--;
+    player.rawMeat--;
+    player.hp = Math.min(player.maxHp, player.hp + 2);
+    player.score += 15;
+    showToast(t.cooked_meat);
+    updateHUD();
+    return;
+  }
+
+  // Slots
   if (player.selectedSlot === 2 && player.goldenApples > 0) {
-    // Golden Apple (+2 extra hearts)
     player.goldenApples--;
     player.maxHp = 7;
     player.hp = Math.min(player.maxHp, player.hp + 3);
     showToast(t.golden_apple);
-    updateHUD();
-    return;
+    updateHUD(); return;
   }
   if (player.selectedSlot === 3 && player.enderPearls > 0) {
-    // Ender Pearl Teleport
     player.enderPearls--;
     player.pos.addScaledVector(forward, 12);
     player.pos.y = 2.2;
-    updateHUD();
-    return;
+    updateHUD(); return;
   }
   if (player.selectedSlot === 4 && player.tnt > 0) {
-    // TNT Explosion
     player.tnt--;
     const boomPos = player.pos.clone().addScaledVector(forward, 4);
     for (let i = enemies.length - 1; i >= 0; i--) {
       if (enemies[i].mesh.position.distanceTo(boomPos) < 8) {
-        scene.remove(enemies[i].mesh);
-        enemies.splice(i, 1);
-        player.score += 30;
+        scene.remove(enemies[i].mesh); enemies.splice(i, 1); player.score += 30;
       }
     }
-    checkWaveClear();
-    updateHUD();
-    return;
+    checkWaveClear(); updateHUD(); return;
   }
   if (player.selectedSlot === 5 && player.blocks > 0) {
-    // Place Block
     player.blocks--;
     const bPos = player.pos.clone().addScaledVector(forward, 3);
-    const blk = new THREE.Mesh(
-      new THREE.BoxGeometry(1.5, 1.5, 1.5),
-      new THREE.MeshLambertMaterial({ color: 0x92400e })
-    );
+    const blk = new THREE.Mesh(new THREE.BoxGeometry(1.5, 1.5, 1.5), new THREE.MeshLambertMaterial({ color: 0x92400e }));
     blk.position.set(Math.round(bPos.x), 0.75, Math.round(bPos.z));
     scene.add(blk);
-    placedBlocks.push(blk);
-    updateHUD();
-    return;
+    updateHUD(); return;
+  }
+  if (player.selectedSlot === 6 && player.waterBuckets > 0) {
+    player.waterBuckets--;
+    const wPos = player.pos.clone().addScaledVector(forward, 3);
+    const water = new THREE.Mesh(new THREE.BoxGeometry(2.5, 0.25, 2.5), new THREE.MeshLambertMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.78 }));
+    water.position.set(wPos.x, 0.12, wPos.z);
+    scene.add(water);
+    showToast(t.water_placed);
+    updateHUD(); return;
   }
 
-  // 3. Mine Cave Ores (with Pickaxe or hand)
+  // Cave Ores
   for (let i = caveOres.length - 1; i >= 0; i--) {
     if (caveOres[i].position.distanceTo(player.pos) < 3.8) {
+      if (caveOres[i].userData.oreType === 'coal') player.coal++;
       player.score += caveOres[i].userData.pts;
-      if (caveOres[i].userData.oreType === 'diamond') player.diamonds++;
-      scene.remove(caveOres[i]);
-      caveOres.splice(i, 1);
-      updateHUD();
-      return;
+      scene.remove(caveOres[i]); caveOres.splice(i, 1);
+      updateHUD(); return;
     }
   }
 
-  // 4. Sword / Melee Attack on Enemies
+  // Enemies
   const dmg = (player.selectedSlot === 0 && player.swordDurability > 0) ? 2 : 1;
   for (let i = enemies.length - 1; i >= 0; i--) {
     const e = enemies[i];
@@ -739,16 +667,12 @@ function performPrimaryAction() {
       if (player.selectedSlot === 0 && player.swordDurability > 0) {
         player.swordDurability = Math.max(0, player.swordDurability - 5);
       }
-      // Knockback
       e.mesh.position.addScaledVector(forward, 1.8);
       if (e.hp <= 0) {
-        scene.remove(e.mesh);
-        enemies.splice(i, 1);
-        player.score += 20;
+        scene.remove(e.mesh); enemies.splice(i, 1);
+        player.score += 20; player.rawMeat += 1;
       }
-      checkWaveClear();
-      updateHUD();
-      return;
+      checkWaveClear(); updateHUD(); return;
     }
   }
 }
@@ -761,7 +685,6 @@ function checkWaveClear() {
   }
 }
 
-// Keyboard & Mouse Listeners
 window.addEventListener('keydown', e => {
   keys[e.code] = true;
   if (!gameRunning) return;
@@ -773,15 +696,14 @@ window.addEventListener('keydown', e => {
   if (e.code === 'Digit4') selectSlot(3);
   if (e.code === 'Digit5') selectSlot(4);
   if (e.code === 'Digit6') selectSlot(5);
+  if (e.code === 'Digit7') selectSlot(6);
 });
 window.addEventListener('keyup', e => { keys[e.code] = false; });
 
 window.addEventListener('mousedown', e => {
   if (!gameRunning) return;
   const canvas = document.getElementById('game-canvas');
-  if (document.pointerLockElement !== canvas && canvas.requestPointerLock) {
-    canvas.requestPointerLock();
-  }
+  if (document.pointerLockElement !== canvas && canvas.requestPointerLock) canvas.requestPointerLock();
   if (e.button === 0) performPrimaryAction();
 });
 
@@ -793,20 +715,17 @@ window.addEventListener('mousemove', e => {
   }
 });
 
-// ================= MAIN GAME LOOP =================
 let netTick = 0;
 function animate() {
   requestAnimationFrame(animate);
   const dt = Math.min(0.05, clock.getDelta());
 
   if (gameRunning) {
-    // Day/Night Cycle
     dayTime += dt * 0.08;
     const sunFactor = (Math.sin(dayTime) + 1) * 0.5;
     scene.background.setRGB(0.08 + sunFactor * 0.42, 0.12 + sunFactor * 0.70, 0.22 + sunFactor * 0.76);
     scene.fog.color.copy(scene.background);
 
-    // Player Movement
     const speed = 9.0;
     const forward = new THREE.Vector3(-Math.sin(player.yaw), 0, -Math.cos(player.yaw));
     const right = new THREE.Vector3(Math.cos(player.yaw), 0, -Math.sin(player.yaw));
@@ -821,22 +740,15 @@ function animate() {
     player.pos.x = Math.max(-56, Math.min(56, player.pos.x + move.x * dt));
     player.pos.z = Math.max(-56, Math.min(56, player.pos.z + move.z * dt));
 
-    // Gravity
     player.vel.y -= 22 * dt;
     player.pos.y += player.vel.y * dt;
-    if (player.pos.y <= 1.7) {
-      player.pos.y = 1.7;
-      player.vel.y = 0;
-      player.onGround = true;
-    }
+    if (player.pos.y <= 1.7) { player.pos.y = 1.7; player.vel.y = 0; player.onGround = true; }
 
-    // Update Camera
     camera.position.copy(player.pos);
     camera.rotation.order = 'YXZ';
     camera.rotation.y = player.yaw;
     camera.rotation.x = player.pitch;
 
-    // Update Enemies AI
     for (const e of enemies) {
       const toPlayer = new THREE.Vector3().subVectors(player.pos, e.mesh.position);
       toPlayer.y = 0;
@@ -863,7 +775,6 @@ function animate() {
       }
     }
 
-    // Broadcast Multiplayer Position
     netTick += dt;
     if (netTick > 0.08 && connections.length > 0) {
       netTick = 0;
