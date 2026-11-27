@@ -1,9 +1,35 @@
-const { app, BrowserWindow } = require("electron");
+const { app, BrowserWindow, session } = require('electron');
+const path = require('path');
+
 function createWindow() {
-  const win = new BrowserWindow({ width: 1280, height: 800, autoHideMenuBar: true, backgroundColor: "#8fc7ef", webPreferences: { contextIsolation: true } });
-  win.setMenuBarVisibility(false);
-  win.webContents.on("before-input-event", (e, i) => { if (i.key === "F11" && i.type === "keyDown") win.setFullScreen(!win.isFullScreen()); });
-  win.loadFile("index.html");
+  const win = new BrowserWindow({
+    width: 1280,
+    height: 760,
+    minWidth: 900,
+    minHeight: 600,
+    title: 'BLOKARENA 3D Survival Game',
+    autoHideMenuBar: true,
+    backgroundColor: '#090d16',
+    webPreferences: {
+      nodeIntegration: false,
+      contextIsolation: true
+    }
+  });
+
+  session.defaultSession.setPermissionRequestHandler((webContents, permission, callback) => {
+    callback(true);
+  });
+
+  win.loadFile(path.join(__dirname, 'index.html'));
 }
-app.whenReady().then(() => { createWindow(); app.on("activate", () => { if (BrowserWindow.getAllWindows().length === 0) createWindow(); }); });
-app.on("window-all-closed", () => { if (process.platform !== "darwin") app.quit(); });
+
+app.whenReady().then(() => {
+  createWindow();
+  app.on('activate', () => {
+    if (BrowserWindow.getAllWindows().length === 0) createWindow();
+  });
+});
+
+app.on('window-all-closed', () => {
+  if (process.platform !== 'darwin') app.quit();
+});
