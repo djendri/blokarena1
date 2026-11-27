@@ -1,16 +1,39 @@
 {
-  "name": "blokarena",
+  "name": "blokarena-3d",
   "version": "1.0.0",
-  "description": "BLOKARENA",
-  "author": "BLOKARENA",
+  "description": "BLOKARENA 3D Survival Game — Desktop Windows Edition",
   "main": "main.js",
-  "scripts": { "build": "electron-builder --win --publish never" },
-  "devDependencies": { "electron": "^33.0.0", "electron-builder": "^25.0.0" },
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder --win nsis"
+  },
   "build": {
-    "appId": "com.blokarena.game",
-    "productName": "BLOKARENA",
-    "files": ["index.html", "main.js", "three.min.js", "icon-512.png", "package.json"],
-    "win": { "target": "nsis", "icon": "icon-512.png" },
-    "nsis": { "oneClick": false, "allowToChangeInstallationDirectory": true }
+    "appId": "com.blokarena.game3d",
+    "productName": "BLOKARENA 3D",
+    "files": [
+      "main.js",
+      "index.html",
+      "package.json"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    }
+  },
+  "devDependencies": {
+    "electron": "^33.2.0",
+    "electron-builder": "^25.1.8"
   }
 }
