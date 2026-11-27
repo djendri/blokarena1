@@ -1,38 +1,58 @@
-{
-"name": "blokarena-3d",
-"version": "1.0.0",
-"description": "BLOKARENA 3D Survival Game — Desktop Windows Edition",
-"main": "main.js",
-"scripts": {
-"start": "electron .",
-"build": "electron-builder --win nsis --x64",
-"dist": "electron-builder --win nsis --x64"
-},
-"build": {
-"appId": "com.blokarena.game3d",
-"productName": "BLOKARENA 3D",
-"directories": {
-"output": "dist"
-},
-"files": [
-"main.js",
-"index.html",
-"three.min.js",
-"package.json"
-],
-"win": {
-"target": "nsis",
-"signAndEditExecutable": false
-},
-"nsis": {
-"oneClick": false,
-"allowToChangeInstallationDirectory": true,
-"createDesktopShortcut": true,
-"createStartMenuShortcut": true
-}
-},
-"devDependencies": {
-"electron": "33.2.0",
-"electron-builder": "25.1.8"
-}
-}
+name: Krijo Instaluesin Windows (.exe)
+
+on:
+push:
+branches: [ main, master ]
+workflow_dispatch:
+
+jobs:
+build-windows:
+runs-on: windows-latest
+
+steps:
+  - name: Shkarko kodin nga GitHub
+    uses: actions/checkout@v4
+
+  - name: Konfiguro Node.js
+    uses: actions/setup-node@v4
+    with:
+      node-version: '20'
+
+  - name: Siguro package.json me skriptin build
+    shell: pwsh
+    run: |
+      @'
+      {
+        "name": "blokarena-3d",
+        "version": "1.0.0",
+        "description": "BLOKARENA 3D Survival Game",
+        "main": "main.js",
+        "scripts": {
+          "start": "electron .",
+          "build": "electron-builder --win nsis --x64"
+        },
+        "build": {
+          "appId": "com.blokarena.game3d",
+          "productName": "BLOKARENA 3D",
+          "directories": { "output": "dist" },
+          "files": ["main.js", "index.html", "three.min.js", "package.json"],
+          "win": { "target": "nsis", "signAndEditExecutable": false }
+        },
+        "devDependencies": {
+          "electron": "33.2.0",
+          "electron-builder": "25.1.8"
+        }
+      }
+      '@ | Set-Content -Path package.json -Encoding UTF8
+
+  - name: Instalo libraritë
+    run: npm install --no-audit --no-fund
+
+  - name: Ndërto instaluesin Windows (.exe)
+    run: npm run build
+
+  - name: Ngarko skedarin instalues (.exe)
+    uses: actions/upload-artifact@v4
+    with:
+      name: BLOKARENA-3D-Windows-Installer
+      path: dist/*.exe
