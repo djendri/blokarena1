@@ -3,791 +3,3164 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>BLOKARENA 3D</title>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-  <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+  <title>BLOKARENA 3D Survival Game</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js" onerror="window.__threeFailed=true"></script>
+  <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js" onerror="window.__peerFailed=true"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@500;700;800;900&display=swap" rel="stylesheet" />
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-user-select: none; }
-    html, body { width: 100%; height: 100%; overflow: hidden; background: #0f172a; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #fff; }
-    #game-canvas { position: fixed; inset: 0; width: 100%; height: 100%; display: block; z-index: 1; }
-
-    .screen {
-      position: fixed; inset: 0; z-index: 20;
-      display: flex; flex-direction: column; align-items: center; justify-content: center;
-      background: radial-gradient(circle at center, rgba(24, 44, 66, 0.93), rgba(10, 16, 24, 0.98));
-      padding: 20px; text-align: center;
+    * {
+      box-sizing: border-box;
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-tap-highlight-color: transparent;
     }
-    .hidden { display: none !important; }
-
-    .logo {
-      font-size: clamp(2.3rem, 6vw, 4.3rem); font-weight: 900; letter-spacing: 4px;
-      color: #4ade80; text-shadow: 0 5px 0 #14532d, 0 12px 25px rgba(0,0,0,0.75);
-      margin-bottom: 8px;
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #090d16;
+      color: #f8fafc;
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
     }
-    .subtitle { color: #cbd5e1; font-size: 1rem; margin-bottom: 22px; max-width: 540px; }
-
-    .lang-bar {
-      position: fixed; top: 14px; right: 14px; display: flex; gap: 6px; z-index: 30;
+    #game-canvas {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      display: block;
+      z-index: 1;
     }
-    .lang-btn {
-      background: rgba(255,255,255,0.12); border: 2px solid rgba(255,255,255,0.25);
-      color: #fff; padding: 6px 11px; border-radius: 8px; font-weight: 700; cursor: pointer;
+    #hurt-vignette {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 12;
+      opacity: 0;
+      transition: opacity 0.16s ease;
+      background: radial-gradient(circle at center, transparent 48%, rgba(225, 29, 72, 0.58) 100%);
     }
-    .lang-btn.active { background: #22c55e; border-color: #86efac; color: #052e16; }
-
-    .card {
-      background: rgba(15, 23, 42, 0.92); border: 2px solid #334155;
-      border-radius: 16px; padding: 22px; width: 100%; max-width: 450px;
-      box-shadow: 0 20px 50px rgba(0,0,0,0.65);
+    #underwater-tint {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 11;
+      opacity: 0;
+      transition: opacity 0.2s ease;
+      background: rgba(14, 116, 144, 0.34);
     }
-    .btn {
-      width: 100%; padding: 12px 16px; margin: 6px 0;
-      border: none; border-radius: 10px; font-size: 1.02rem; font-weight: 800;
-      cursor: pointer; transition: transform 0.1s;
-      color: #fff; background: #2563eb; box-shadow: 0 4px 0 #1e3a8a;
-    }
-    .btn:active { transform: translateY(2px); }
-    .btn.green { background: #16a34a; box-shadow: 0 4px 0 #14532d; }
-    .btn.orange { background: #ea580c; box-shadow: 0 4px 0 #7c2d12; }
-    .btn.gray { background: #475569; box-shadow: 0 4px 0 #1e293b; }
-    .btn.red { background: #dc2626; box-shadow: 0 4px 0 #7f1d1d; }
-
-    .input-box {
-      width: 100%; padding: 11px; margin: 7px 0; border-radius: 10px;
-      border: 2px solid #475569; background: #0f172a; color: #fff;
-      font-size: 1rem; text-align: center; font-weight: 700;
-    }
-    .code-display {
-      font-size: 1.75rem; font-weight: 900; letter-spacing: 5px;
-      background: #020617; border: 2px dashed #4ade80; color: #4ade80;
-      padding: 11px; border-radius: 10px; margin: 10px 0;
-    }
-
-    #hud { position: fixed; inset: 0; z-index: 10; pointer-events: none; }
     #crosshair {
-      position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
-      width: 18px; height: 18px; pointer-events: none;
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      width: 22px;
+      height: 22px;
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+      z-index: 15;
     }
     #crosshair::before, #crosshair::after {
-      content: ''; position: absolute; background: rgba(255,255,255,0.85);
+      content: '';
+      position: absolute;
+      background: rgba(255, 255, 255, 0.92);
+      box-shadow: 0 0 4px rgba(0, 0, 0, 0.85);
+      border-radius: 2px;
     }
-    #crosshair::before { top: 8px; left: 0; width: 18px; height: 2px; }
-    #crosshair::after { left: 8px; top: 0; width: 2px; height: 18px; }
-
-    .top-bar {
-      position: fixed; top: 12px; left: 12px; right: 12px;
-      display: flex; justify-content: space-between; align-items: flex-start; gap: 10px;
+    #crosshair::before {
+      width: 2px;
+      height: 14px;
+      top: 4px;
+      left: 10px;
     }
-    .hud-panel {
-      background: rgba(15, 23, 42, 0.8); border: 2px solid rgba(255,255,255,0.18);
-      border-radius: 12px; padding: 8px 14px; pointer-events: auto;
+    #crosshair::after {
+      width: 14px;
+      height: 2px;
+      top: 10px;
+      left: 4px;
     }
-    .hearts { font-size: 1.2rem; letter-spacing: 2px; }
-    .stats-line { font-size: 0.88rem; color: #e2e8f0; margin-top: 3px; font-weight: 700; }
-
-    .hotbar {
-      position: fixed; bottom: 14px; left: 50%; transform: translateX(-50%);
-      display: flex; gap: 6px; background: rgba(15, 23, 42, 0.88);
-      padding: 7px; border-radius: 14px; border: 2px solid #475569; pointer-events: auto;
+    #atk-cd-bar {
+      position: fixed;
+      top: calc(50% + 16px);
+      left: 50%;
+      width: 28px;
+      height: 3px;
+      transform: translateX(-50%);
+      background: rgba(15, 23, 42, 0.75);
+      border-radius: 2px;
+      overflow: hidden;
+      pointer-events: none;
+      z-index: 15;
+      opacity: 0;
+      transition: opacity 0.12s ease;
     }
-    .slot {
-      width: 52px; height: 52px; border-radius: 10px; border: 2px solid #334155;
-      background: rgba(30, 41, 59, 0.9); display: flex; flex-direction: column;
-      align-items: center; justify-content: center; cursor: pointer; position: relative;
-      font-size: 1.3rem;
+    #atk-cd-fill {
+      width: 100%;
+      height: 100%;
+      background: #34d399;
     }
-    .slot.active { border-color: #4ade80; background: rgba(22, 101, 52, 0.7); transform: translateY(-3px); }
-    .slot-count {
-      position: absolute; bottom: 2px; right: 4px; font-size: 0.7rem;
-      font-weight: 800; color: #f8fafc; text-shadow: 1px 1px 2px #000;
+    .ba-panel {
+      background: rgba(11, 17, 30, 0.86);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(148, 163, 184, 0.22);
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.55);
     }
-    .slot-key {
-      position: absolute; top: 2px; left: 5px; font-size: 0.65rem; color: #94a3b8;
+    .mc-btn {
+      background: linear-gradient(180deg, rgba(30, 41, 59, 0.95) 0%, rgba(15, 23, 42, 0.95) 100%);
+      border: 1px solid rgba(148, 163, 184, 0.3);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12), 0 4px 12px rgba(0, 0, 0, 0.4);
+      transition: transform 0.08s ease, border-color 0.15s ease;
     }
-
-    .touch-controls {
-      position: fixed; bottom: 82px; left: 16px; right: 16px;
-      display: flex; justify-content: space-between; pointer-events: none;
+    .mc-btn:active {
+      transform: translateY(1px) scale(0.98);
     }
-    .dpad, .action-pad { display: flex; gap: 8px; pointer-events: auto; }
-    .t-btn {
-      width: 50px; height: 50px; border-radius: 50%; border: 2px solid rgba(255,255,255,0.35);
-      background: rgba(15, 23, 42, 0.75); color: #fff; font-weight: 900; font-size: 1.05rem;
-      display: flex; align-items: center; justify-content: center;
+    .mc-btn-green {
+      background: linear-gradient(180deg, #10b981 0%, #047857 100%);
+      border: 1px solid rgba(110, 231, 183, 0.55);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.28), 0 8px 24px rgba(16, 185, 129, 0.38);
+      transition: transform 0.1s ease, filter 0.15s ease;
     }
-
-    #toast {
-      position: fixed; top: 76px; left: 50%; transform: translateX(-50%);
-      background: rgba(15, 23, 42, 0.94); border: 2px solid #4ade80;
-      padding: 8px 18px; border-radius: 999px; font-weight: 700; z-index: 25;
-      opacity: 0; transition: opacity 0.25s; pointer-events: none;
+    .mc-btn-green:hover {
+      filter: brightness(1.06);
     }
-    #toast.show { opacity: 1; }
+    .mc-btn-green:active {
+      transform: translateY(2px);
+    }
+    .hotbar-slot {
+      position: relative;
+      width: 42px;
+      height: 42px;
+      border-radius: 10px;
+      background: rgba(15, 23, 42, 0.82);
+      border: 1.5px solid rgba(148, 163, 184, 0.28);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: transform 0.1s ease, border-color 0.12s ease;
+    }
+    @media (min-width: 640px) {
+      .hotbar-slot {
+        width: 46px;
+        height: 46px;
+      }
+    }
+    .hotbar-slot.active {
+      border-color: #fbbf24;
+      background: rgba(30, 41, 59, 0.96);
+      transform: translateY(-3px);
+      box-shadow: 0 0 14px rgba(251, 191, 36, 0.35);
+    }
+    .voice-live {
+      border-color: #34d399 !important;
+      box-shadow: 0 0 14px rgba(52, 211, 153, 0.45) !important;
+    }
+    .scroll-modal::-webkit-scrollbar {
+      width: 6px;
+    }
+    .scroll-modal::-webkit-scrollbar-thumb {
+      background: rgba(148, 163, 184, 0.35);
+      border-radius: 999px;
+    }
   </style>
 </head>
 <body>
+  <canvas id="game-canvas"></canvas>
 
-<canvas id="game-canvas"></canvas>
+  <div id="hurt-vignette"></div>
+  <div id="underwater-tint"></div>
+  <div id="crosshair" class="hidden"></div>
+  <div id="atk-cd-bar"><div id="atk-cd-fill"></div></div>
 
-<div class="lang-bar">
-  <button class="lang-btn active" onclick="setLang('sq')">SQ</button>
-  <button class="lang-btn" onclick="setLang('de')">DE</button>
-  <button class="lang-btn" onclick="setLang('en')">EN</button>
-  <button class="lang-btn" onclick="setLang('tr')">TR</button>
-</div>
+  <!-- Top HUD -->
+  <div id="hud-top" class="fixed top-2 left-2 right-2 z-20 hidden items-start justify-between gap-2 pointer-events-none">
+    <div class="flex flex-wrap items-center gap-1.5 pointer-events-auto">
+      <div class="ba-panel px-2.5 py-1.5 rounded-xl flex items-center gap-2 text-xs font-extrabold">
+        <span id="net-dot" class="w-2.5 h-2.5 rounded-full bg-emerald-400 shadow-[0_0_8px_#34d399]"></span>
+        <span id="hud-name" class="max-w-[100px] truncate text-white">ArenaHero</span>
+        <span id="hud-mode" class="px-2 py-0.5 rounded-md bg-amber-500/20 border border-amber-400/40 text-amber-300 text-[10px]">Vetëm AI</span>
+      </div>
+      <div class="ba-panel px-2.5 py-1.5 rounded-xl flex items-center gap-1.5 text-xs font-black text-emerald-300">
+        <span>🏆</span>
+        <span id="hud-level">Niveli 1</span>
+        <span id="hud-wave" class="text-[10px] text-slate-300">(0/5)</span>
+      </div>
+      <div id="hud-goldapple-badge" class="hidden ba-panel px-2.5 py-1.5 rounded-xl text-xs font-black text-amber-300">
+        🍎 +2❤️ <span id="hud-ga-time">180s</span>
+      </div>
+      <div id="hud-peace-badge" class="ba-panel px-2.5 py-1.5 rounded-xl text-xs font-black text-sky-300">
+        🕊️ Paqe: Mblidh Fruta &amp; Peshko
+      </div>
+    </div>
 
-<!-- MAIN MENU -->
-<div id="menu-main" class="screen">
-  <div class="logo">BLOKARENA</div>
-  <div class="subtitle" data-i18n="subtitle">Ndërto, gërmo në shpellë, hap 4 kutitë dhe mbijeto kundër përbindëshave!</div>
-  <div class="card">
-    <input id="player-name" class="input-box" maxlength="14" placeholder="Emri i lojtarit..." value="Lojtari1" />
-    <button class="btn green" onclick="startSinglePlayer()" data-i18n="btn_single">Luaj Vetëm (Me Kundërshtarë)</button>
-    <button class="btn" onclick="openGroupMenu()" data-i18n="btn_group">Luaj në Grup (Me Kod)</button>
-    <button class="btn orange" onclick="toggleHelp()" data-i18n="btn_help">Kontrollet & Rregullat</button>
-    <div id="help-box" class="hidden" style="margin-top:12px; font-size:0.86rem; color:#cbd5e1; text-align:left; line-height:1.45;">
-      <p data-i18n="help_text">• WASD / Shigjetat: Lëviz | Space: Kërce | Kliko / E: Sulmo, Hap Kuti, Piq Mish ose Gërmo<br>• 1-7: Shpatë, Kazmë, Mollë e Artë (+2 Zemra), Perlë, TNT, Bllok, Kovë Uji<br>• Gjej 4 kutitë (përmbajnë Lëng të Verdhë që riparon shpatën 100%) dhe shpellën!</p>
+    <div class="flex flex-wrap items-center justify-end gap-1.5 pointer-events-auto">
+      <div class="ba-panel rounded-xl p-0.5 flex gap-0.5">
+        <button type="button" onclick="setLang('sq')" data-lang="sq" class="px-2 py-1 rounded-lg text-[11px] font-black cursor-pointer">🇦🇱 SQ</button>
+        <button type="button" onclick="setLang('de')" data-lang="de" class="px-2 py-1 rounded-lg text-[11px] font-black cursor-pointer">🇩🇪 DE</button>
+        <button type="button" onclick="setLang('en')" data-lang="en" class="px-2 py-1 rounded-lg text-[11px] font-black cursor-pointer">🇬🇧 EN</button>
+        <button type="button" onclick="setLang('tr')" data-lang="tr" class="px-2 py-1 rounded-lg text-[11px] font-black cursor-pointer">🇹🇷 TR</button>
+      </div>
+
+      <button id="btn-voice" type="button" onclick="toggleVoiceChat()" class="mc-btn px-2.5 py-1.5 rounded-xl flex items-center gap-1.5 text-xs font-extrabold cursor-pointer">
+        <span>🎙️</span>
+        <span id="voice-txt">Voice [V]</span>
+        <span id="voice-bars" class="hidden items-end gap-0.5 h-3">
+          <i class="w-0.5 h-1.5 bg-emerald-400 block transition-all"></i>
+          <i class="w-0.5 h-3 bg-emerald-400 block transition-all"></i>
+          <i class="w-0.5 h-2 bg-emerald-400 block transition-all"></i>
+        </span>
+      </button>
+
+      <button type="button" onclick="toggleCraftModal(true)" class="mc-btn px-2.5 py-1.5 rounded-xl flex items-center gap-1 text-xs font-extrabold text-amber-300 cursor-pointer">
+        <span>🧰</span>
+        <span id="hud-craft-lbl">Tavolina e punës [E]</span>
+      </button>
+
+      <button type="button" onclick="toggleShopModal(true)" class="mc-btn px-2.5 py-1.5 rounded-xl flex items-center gap-1 text-xs font-extrabold text-emerald-300 cursor-pointer">
+        <span>🏪</span>
+        <span id="hud-coins">0🪙</span>
+      </button>
+
+      <button type="button" onclick="SFX.horn()" title="Buria [B]" class="mc-btn px-2 py-1.5 rounded-xl text-xs font-extrabold text-amber-200 cursor-pointer">📯</button>
+      <button type="button" onclick="toggleSiren()" id="btn-siren" title="Sirena Policisë [P]" class="mc-btn px-2 py-1.5 rounded-xl text-xs font-extrabold text-sky-300 cursor-pointer">🚨</button>
+
+      <button id="btn-save-now" type="button" onclick="saveProgress(true)" class="mc-btn px-2.5 py-1.5 rounded-xl text-xs font-extrabold text-emerald-300 cursor-pointer">💾</button>
+      <button id="btn-hud-back" type="button" onclick="goBackSmart()" class="mc-btn px-2.5 py-1.5 rounded-xl text-xs font-extrabold text-sky-300 cursor-pointer">← Mbrapa</button>
+      <button type="button" onclick="openLobby()" class="mc-btn px-2.5 py-1.5 rounded-xl text-xs font-extrabold cursor-pointer">☰</button>
     </div>
   </div>
-</div>
 
-<!-- GROUP LOBBY -->
-<div id="menu-group" class="screen hidden">
-  <div class="logo" style="font-size:2.3rem;" data-i18n="group_title">GRUP ME KOD</div>
-  <div class="card">
-    <p style="color:#94a3b8; font-size:0.9rem;" data-i18n="your_code_lbl">Kodi yt i dhomës:</p>
-    <div id="room-code-text" class="code-display">----</div>
-    <button class="btn green" onclick="hostGroupGame()" data-i18n="btn_host">Krijo Dhomë & Fillo</button>
-    <hr style="border-color:#334155; margin:12px 0;">
-    <input id="join-code-input" class="input-box" maxlength="8" placeholder="Shkruaj kodin e shokut..." />
-    <button class="btn" onclick="joinGroupGame()" data-i18n="btn_join">Hyr me Kod</button>
-    <div id="group-status" style="margin-top:8px; font-size:0.88rem; color:#4ade80;"></div>
-    <button class="btn gray" style="margin-top:12px;" onclick="backToMainMenu()" data-i18n="btn_back">← Kthehu Mbrapa</button>
-  </div>
-</div>
-
-<!-- GAME OVER -->
-<div id="menu-gameover" class="screen hidden">
-  <div class="logo" style="color:#ef4444;" data-i18n="game_over">LOJA MBAROI!</div>
-  <div class="card">
-    <p id="final-stats" style="font-size:1.1rem; margin-bottom:14px;"></p>
-    <button class="btn green" onclick="restartGame()" data-i18n="btn_restart">Luaj Përsëri</button>
-    <button class="btn gray" onclick="backToMainMenu()" data-i18n="btn_back">← Kthehu Mbrapa</button>
-  </div>
-</div>
-
-<!-- IN-GAME HUD -->
-<div id="hud" class="hidden">
-  <div id="crosshair"></div>
-  <div id="toast"></div>
-
-  <div class="top-bar">
-    <div class="hud-panel">
-      <div id="hearts-display" class="hearts">❤️❤️❤️❤️❤️</div>
-      <div id="stats-display" class="stats-line">Niveli: 1 | Pikë: 0 | 🔥 Qymyr: 2 | ☀️ Ditë</div>
+  <!-- Tab Roster Overlay -->
+  <div id="tab-overlay" class="fixed top-14 left-1/2 -translate-x-1/2 z-30 hidden ba-panel rounded-2xl p-3.5 w-80 text-xs pointer-events-none border-emerald-400/40">
+    <div class="font-black text-amber-300 mb-2 flex justify-between items-center border-b border-slate-700/80 pb-1.5">
+      <span>👥 LOJTARËT NË LOJË [TAB]</span>
+      <span id="tab-lvl-badge" class="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300">Niveli 1</span>
     </div>
-    <div class="hud-panel" style="display:flex; gap:8px; align-items:center;">
-      <span id="room-badge" style="font-size:0.85rem; color:#4ade80; font-weight:800;"></span>
-      <button class="btn red" style="padding:6px 12px; margin:0; font-size:0.85rem;" onclick="exitToMenu()" data-i18n="btn_exit">Dil</button>
-    </div>
+    <div id="tab-players-list" class="space-y-1.5 text-slate-200 font-bold"></div>
   </div>
 
-  <div class="hotbar" id="hotbar">
-    <div class="slot active" onclick="selectSlot(0)"><span class="slot-key">1</span>⚔️<span id="cnt-0" class="slot-count">100%</span></div>
-    <div class="slot" onclick="selectSlot(1)"><span class="slot-key">2</span>⛏️<span id="cnt-1" class="slot-count">1</span></div>
-    <div class="slot" onclick="selectSlot(2)"><span class="slot-key">3</span>🍎<span id="cnt-2" class="slot-count">1</span></div>
-    <div class="slot" onclick="selectSlot(3)"><span class="slot-key">4</span>🔮<span id="cnt-3" class="slot-count">2</span></div>
-    <div class="slot" onclick="selectSlot(4)"><span class="slot-key">5</span>🧨<span id="cnt-4" class="slot-count">1</span></div>
-    <div class="slot" onclick="selectSlot(5)"><span class="slot-key">6</span>🧱<span id="cnt-5" class="slot-count">12</span></div>
-    <div class="slot" onclick="selectSlot(6)"><span class="slot-key">7</span>🪣<span id="cnt-6" class="slot-count">1</span></div>
+  <!-- Bottom Hearts + Sword Power Bar + 9-Slot Hotbar -->
+  <div id="hud-bottom" class="fixed bottom-2 left-1/2 -translate-x-1/2 z-20 hidden flex-col items-center gap-1 pointer-events-none w-full max-w-[96vw]">
+    <div class="flex flex-wrap items-center justify-center gap-3 pointer-events-auto">
+      <div id="hearts-row" class="ba-panel px-2.5 py-1 rounded-full flex items-center gap-0.5"></div>
+      <div class="ba-panel px-2.5 py-1 rounded-full flex items-center gap-1.5 text-[11px] font-extrabold text-amber-300">
+        <span>🧪</span>
+        <div class="w-16 h-2 rounded-full bg-slate-800 overflow-hidden">
+          <div id="sword-power-bar" class="h-full bg-amber-400 transition-all" style="width:100%"></div>
+        </div>
+        <span id="sword-power-pct">100%</span>
+      </div>
+    </div>
+
+    <div id="active-item-name" class="text-[11px] font-extrabold text-amber-200 drop-shadow px-2 py-0.5 rounded-md bg-slate-950/65"></div>
+
+    <div id="hotbar-row" class="ba-panel p-1 rounded-2xl flex items-center gap-1 pointer-events-auto overflow-x-auto max-w-full"></div>
   </div>
 
-  <div class="touch-controls">
-    <div class="dpad">
-      <button class="t-btn" ontouchstart="keys['KeyA']=true" ontouchend="keys['KeyA']=false">◀</button>
-      <button class="t-btn" ontouchstart="keys['KeyW']=true" ontouchend="keys['KeyW']=false">▲</button>
-      <button class="t-btn" ontouchstart="keys['KeyS']=true" ontouchend="keys['KeyS']=false">▼</button>
-      <button class="t-btn" ontouchstart="keys['KeyD']=true" ontouchend="keys['KeyD']=false">▶</button>
+  <!-- Touch Controls -->
+  <div id="touch-ui" class="fixed inset-x-3 bottom-20 z-20 hidden justify-between items-end pointer-events-none sm:bottom-24">
+    <div class="pointer-events-auto flex flex-col items-center gap-1">
+      <button type="button" data-key="KeyW" class="touch-pad mc-btn w-11 h-11 rounded-xl font-black text-sm">▲</button>
+      <div class="flex gap-1">
+        <button type="button" data-key="KeyA" class="touch-pad mc-btn w-11 h-11 rounded-xl font-black text-sm">◀</button>
+        <button type="button" data-key="KeyS" class="touch-pad mc-btn w-11 h-11 rounded-xl font-black text-sm">▼</button>
+        <button type="button" data-key="KeyD" class="touch-pad mc-btn w-11 h-11 rounded-xl font-black text-sm">▶</button>
+      </div>
     </div>
-    <div class="action-pad">
-      <button class="t-btn" onclick="jumpPlayer()">⬆</button>
-      <button class="t-btn" style="background:rgba(220,38,38,0.85);" onclick="performPrimaryAction()">⚔️</button>
+
+    <div class="pointer-events-auto flex items-center gap-1.5">
+      <button id="t-jump-btn" type="button" onclick="triggerJump()" class="mc-btn px-3 py-2.5 rounded-xl text-xs font-black text-sky-300">Kërce</button>
+      <button id="t-use-btn" type="button" onclick="secondaryAction()" class="mc-btn px-3 py-2.5 rounded-xl text-xs font-black text-amber-300">Përdor</button>
+      <button id="t-hit-btn" type="button" onclick="primaryAction()" class="mc-btn-green px-3.5 py-2.5 rounded-xl text-xs font-black text-white">Godit</button>
     </div>
   </div>
-</div>
 
-<script>
-const I18N = {
-  sq: {
-    subtitle: "Ndërto, gërmo në shpellë, hap 4 kutitë dhe mbijeto kundër përbindëshave!",
-    btn_single: "Luaj Vetëm (Me Kundërshtarë)",
-    btn_group: "Luaj në Grup (Me Kod)",
-    btn_help: "Kontrollet & Rregullat",
-    help_text: "• WASD / Shigjetat: Lëviz | Space: Kërce | Kliko / E: Sulmo, Hap Kuti, Piq Mish ose Gërmo<br>• 1-7: Shpatë, Kazmë, Mollë e Artë (+2 Zemra), Perlë, TNT, Bllok, Kovë Uji<br>• Gjej 4 kutitë (përmbajnë Lëng të Verdhë që riparon shpatën 100%) dhe shpellën!",
-    group_title: "GRUP ME KOD",
-    your_code_lbl: "Kodi yt i dhomës:",
-    btn_host: "Krijo Dhomë & Fillo",
-    btn_join: "Hyr me Kod",
-    btn_back: "← Kthehu Mbrapa",
-    game_over: "LOJA MBAROI!",
-    btn_restart: "Luaj Përsëri",
-    btn_exit: "Dil",
-    lvl: "Niveli", pts: "Pikë", coal: "Qymyr", day: "Ditë", night: "Natë",
-    chest_opened: "Kutia u hap! Gjete Lëng të Verdhë (shpata 100%) & sende!",
-    golden_apple: "Hëngre Mollë të Artë! +2 Zemra ekstra!",
-    cooked_meat: "Pjeke mishin me qymyr! +2 Zemra!",
-    water_placed: "Hodhe ujë nga kova!",
-    level_up: "URIME! Kalove në Nivelin "
-  },
-  de: {
-    subtitle: "Baue, grabe in der Höhle, öffne 4 Truhen und überlebe gegen Monster!",
-    btn_single: "Allein Spielen (Mit Gegnern)",
-    btn_group: "Gruppe mit Code",
-    btn_help: "Steuerung & Regeln",
-    help_text: "• WASD / Pfeile: Bewegen | Leertaste: Springen | Klick / E: Angreifen, Truhe, Ofen, Graben<br>• 1-7: Schwert, Spitzhacke, Goldapfel (+2 Herzen), Perle, TNT, Block, Wassereimer<br>• Finde die 4 Truhen (mit gelbem Trank für 100% Schwert) und die Höhle!",
-    group_title: "GRUPPE MIT CODE",
-    your_code_lbl: "Dein Raum-Code:",
-    btn_host: "Raum Erstellen & Starten",
-    btn_join: "Mit Code Beitreten",
-    btn_back: "← Zurück",
-    game_over: "SPIEL VORBEI!",
-    btn_restart: "Nochmal Spielen",
-    btn_exit: "Beenden",
-    lvl: "Level", pts: "Punkte", coal: "Kohle", day: "Tag", night: "Nacht",
-    chest_opened: "Truhe geöffnet! Gelber Trank (100% Schwert) + Beute!",
-    golden_apple: "Goldener Apfel gegessen! +2 Extra-Herzen!",
-    cooked_meat: "Fleisch mit Kohle gebraten! +2 Herzen!",
-    water_placed: "Wasser aus dem Eimer gegossen!",
-    level_up: "GLÜCKWUNSCH! Neues Level: "
-  },
-  en: {
-    subtitle: "Build, mine in the cave, open 4 chests and survive against monsters!",
-    btn_single: "Single Player (With Opponents)",
-    btn_group: "Play in Group (Room Code)",
-    btn_help: "Controls & Rules",
-    help_text: "• WASD / Arrows: Move | Space: Jump | Click / E: Attack, Chest, Furnace, Mine<br>• 1-7: Sword, Pickaxe, Golden Apple (+2 Hearts), Pearl, TNT, Block, Water Bucket<br>• Find the 4 chests (Yellow Juice repairs sword 100%) and the cave!",
-    group_title: "GROUP WITH CODE",
-    your_code_lbl: "Your Room Code:",
-    btn_host: "Create Room & Start",
-    btn_join: "Join with Code",
-    btn_back: "← Go Back",
-    game_over: "GAME OVER!",
-    btn_restart: "Play Again",
-    btn_exit: "Exit",
-    lvl: "Level", pts: "Score", coal: "Coal", day: "Day", night: "Night",
-    chest_opened: "Chest opened! Found Yellow Juice (100% sword) & loot!",
-    golden_apple: "Ate Golden Apple! +2 Extra Hearts!",
-    cooked_meat: "Cooked meat with coal! +2 Hearts!",
-    water_placed: "Placed water from bucket!",
-    level_up: "LEVEL UP! Reached Level "
-  },
-  tr: {
-    subtitle: "İnşa et, mağarada kazı yap, 4 sandığı aç ve canavarlara karşı hayatta kal!",
-    btn_single: "Tek Oyna (Rakiplerle)",
-    btn_group: "Kod ile Grup Oyunu",
-    btn_help: "Kontroller ve Kurallar",
-    help_text: "• WASD / Oklar: Hareket | Boşluk: Zıpla | Tıkla / E: Saldır, Sandık, Fırın, Kaz<br>• 1-7: Kılıç, Kazma, Altın Elma (+2 Kalp), İnci, TNT, Blok, Su Kovası<br>• 4 sandığı (Sarı İksir kılıcı %100 onarır) ve mağarayı bul!",
-    group_title: "KOD İLE GRUP",
-    your_code_lbl: "Oda Kodun:",
-    btn_host: "Oda Oluştur ve Başla",
-    btn_join: "Kod ile Katıl",
-    btn_back: "← Geri Dön",
-    game_over: "OYUN BİTTİ!",
-    btn_restart: "Tekrar Oyna",
-    btn_exit: "Çıkış",
-    lvl: "Seviye", pts: "Puan", coal: "Kömür", day: "Gündüz", night: "Gece",
-    chest_opened: "Sandık açıldı! Sarı İksir (%100 kılıç) ve eşyalar bulundu!",
-    golden_apple: "Altın Elma yendi! +2 Ekstra Kalp!",
-    cooked_meat: "Kömürle et pişti! +2 Kalp!",
-    water_placed: "Kovadan su döküldü!",
-    level_up: "TEBRİKLER! Yeni Seviye: "
-  }
-};
+  <!-- Start / Lobby Modal -->
+  <div id="lobby-modal" class="fixed inset-0 z-40 flex items-center justify-center p-2 sm:p-4 bg-slate-950/75 backdrop-blur-sm overflow-y-auto scroll-modal">
+    <div class="ba-panel w-full max-w-md rounded-2xl p-3.5 sm:p-5 my-auto max-h-[92vh] overflow-y-auto scroll-modal">
+      <div class="flex items-start justify-between gap-2 mb-2.5">
+        <div>
+          <div class="flex items-center gap-1.5">
+            <span class="text-lg">💠</span>
+            <h1 class="text-lg sm:text-xl font-black tracking-tight text-white">BLOKARENA</h1>
+          </div>
+          <p id="ui-sub" class="text-[11px] text-slate-300 font-semibold">BLOKARENA 3D • Fshati • Liqeni • Dyqani • Kafshë</p>
+        </div>
+        <div class="flex flex-col items-end gap-1">
+          <button id="btn-lobby-back" type="button" onclick="goBackSmart()" class="mc-btn px-2 py-1 rounded-lg text-[11px] font-black text-sky-300 cursor-pointer">← Mbrapa</button>
+          <div class="flex flex-wrap gap-0.5 bg-slate-900/90 p-1 rounded-xl border border-slate-700/70">
+            <button type="button" onclick="setLang('sq')" data-lang="sq" class="px-1.5 py-1 rounded-lg text-[10px] font-black cursor-pointer">🇦🇱 SQ</button>
+            <button type="button" onclick="setLang('de')" data-lang="de" class="px-1.5 py-1 rounded-lg text-[10px] font-black cursor-pointer">🇩🇪 DE</button>
+            <button type="button" onclick="setLang('en')" data-lang="en" class="px-1.5 py-1 rounded-lg text-[10px] font-black cursor-pointer">🇬🇧 EN</button>
+            <button type="button" onclick="setLang('tr')" data-lang="tr" class="px-1.5 py-1 rounded-lg text-[10px] font-black cursor-pointer">🇹🇷 TR</button>
+          </div>
+        </div>
+      </div>
 
-let currentLang = 'sq';
-function setLang(lang) {
-  currentLang = lang;
-  document.querySelectorAll('.lang-btn').forEach(b => b.classList.toggle('active', b.textContent.toLowerCase() === lang));
-  document.querySelectorAll('[data-i18n]').forEach(el => {
-    const k = el.getAttribute('data-i18n');
-    if (I18N[lang][k]) el.innerHTML = I18N[lang][k];
-  });
-  updateHUD();
-}
+      <div id="save-banner" class="hidden mb-2.5 px-2.5 py-1.5 rounded-xl bg-emerald-500/15 border border-emerald-400/35 flex items-center justify-between gap-2 text-[11px]">
+        <span id="save-banner-txt" class="font-bold text-emerald-300 truncate"></span>
+        <button id="btn-reset-save" type="button" onclick="resetSavedWorld()" class="px-2 py-0.5 rounded-md bg-rose-500/25 border border-rose-400/40 text-rose-200 font-extrabold cursor-pointer shrink-0">🗑️ Botë e Re</button>
+      </div>
 
-function showToast(msg) {
-  const t = document.getElementById('toast');
-  t.textContent = msg;
-  t.classList.add('show');
-  setTimeout(() => t.classList.remove('show'), 2600);
-}
+      <div class="mb-2.5">
+        <label id="ui-name-lbl" for="input-name" class="block text-[11px] font-extrabold uppercase tracking-wider text-slate-300 mb-1">Emri i lojtarit</label>
+        <input
+          id="input-name"
+          type="text"
+          maxlength="18"
+          value="ArenaHero"
+          oninput="refreshGroupStatus()"
+          class="w-full px-3 py-2 rounded-xl bg-slate-900/95 border border-slate-700 text-sm font-bold text-white focus:outline-none focus:border-emerald-400"
+        />
+      </div>
 
-function hideAllScreens() {
-  document.getElementById('menu-main').classList.add('hidden');
-  document.getElementById('menu-group').classList.add('hidden');
-  document.getElementById('menu-gameover').classList.add('hidden');
-}
+      <div class="mb-2.5">
+        <span id="ui-mode-lbl" class="block text-[11px] font-extrabold uppercase tracking-wider text-slate-300 mb-1">Mënyra e lojës</span>
+        <div class="grid grid-cols-2 gap-2">
+          <button id="btn-mode-solo" type="button" onclick="pickMode('solo')" class="p-2 rounded-xl border-2 border-emerald-400 bg-emerald-500/15 text-left cursor-pointer">
+            <div id="ui-solo-t" class="text-xs font-black text-emerald-300">⚔️ Vetëm</div>
+            <div id="ui-solo-d" class="text-[10px] text-slate-300 font-semibold">Kundërshtarë AI</div>
+          </button>
+          <button id="btn-mode-group" type="button" onclick="pickMode('group')" class="p-2 rounded-xl border-2 border-slate-700 bg-slate-900/80 text-left cursor-pointer">
+            <div id="ui-group-t" class="text-xs font-black text-sky-300">👥 Në grup</div>
+            <div id="ui-group-d" class="text-[10px] text-slate-300 font-semibold">Lidhje online me kod</div>
+          </button>
+        </div>
+      </div>
 
-function backToMainMenu() {
-  gameRunning = false;
-  if (document.pointerLockElement) document.exitPointerLock();
-  document.getElementById('hud').classList.add('hidden');
-  hideAllScreens();
-  document.getElementById('menu-main').classList.remove('hidden');
-}
+      <div id="group-panel" class="hidden mb-3 p-2.5 rounded-xl bg-slate-950/90 border border-sky-500/40 space-y-2">
+        <div class="flex items-center justify-between gap-1.5 flex-wrap">
+          <button id="btn-group-back" type="button" onclick="pickMode('solo')" class="mc-btn px-2 py-1 rounded-lg text-[11px] font-black text-sky-300 cursor-pointer">← Mbrapa</button>
+          <span id="ui-code-lbl" class="text-[11px] font-extrabold text-sky-300">Kodi privat i grupit (5 karaktere)</span>
+          <div class="flex gap-1">
+            <button id="ui-host-btn" type="button" onclick="setGroupRole('host')" class="px-2 py-1 rounded-lg text-[10px] font-black bg-sky-400 text-slate-950 cursor-pointer">👑 Krijo</button>
+            <button id="ui-join-btn" type="button" onclick="setGroupRole('join')" class="px-2 py-1 rounded-lg text-[10px] font-bold bg-slate-800 text-slate-200 cursor-pointer">🔗 Hyr</button>
+            <button id="ui-gen-btn" type="button" onclick="genCode()" class="mc-btn px-2 py-1 rounded-lg text-[10px] font-extrabold text-sky-200 cursor-pointer">🎲</button>
+          </div>
+        </div>
+        <div class="flex gap-1.5">
+          <input
+            id="input-code"
+            type="text"
+            maxlength="5"
+            value="B7K4P"
+            oninput="this.value=this.value.toUpperCase(); State.code=this.value; refreshGroupStatus();"
+            class="flex-1 px-3 py-1.5 rounded-lg bg-slate-900 border border-sky-500/50 text-sm font-black tracking-widest uppercase text-sky-200 focus:outline-none"
+          />
+          <button id="ui-copy-btn" type="button" onclick="copyCode()" class="mc-btn px-2.5 py-1.5 rounded-lg text-xs font-extrabold text-amber-300 cursor-pointer">📋 Kopjo</button>
+        </div>
+        <div id="group-status-line" class="text-[11px] font-bold text-emerald-300"></div>
+      </div>
 
-function exitToMenu() { backToMainMenu(); }
-function toggleHelp() { document.getElementById('help-box').classList.toggle('hidden'); }
+      <button id="btn-start" type="button" onclick="launchGame()" class="mc-btn-green w-full py-2.5 rounded-xl text-sm font-black tracking-wide text-white cursor-pointer">▶ LUAJ</button>
+    </div>
+  </div>
 
-let peer = null, connections = [], myRoomCode = '', remotePlayers = {};
+  <!-- 4-Slot Crafting, Furnace & Shop Modal -->
+  <div id="craft-modal" class="fixed inset-0 z-40 hidden items-center justify-center p-3 bg-slate-950/75 backdrop-blur-sm">
+    <div class="ba-panel w-full max-w-lg rounded-2xl p-4 max-h-[88vh] overflow-y-auto scroll-modal">
+      <div class="flex items-center justify-between gap-2 mb-3">
+        <div class="flex gap-1.5">
+          <button id="tab-btn-craft" type="button" onclick="switchCraftTab('craft')" class="px-3 py-1.5 rounded-xl text-xs font-black bg-amber-400 text-slate-950 cursor-pointer">🧰 Tavolina e punës</button>
+          <button id="tab-btn-furnace" type="button" onclick="switchCraftTab('furnace')" class="px-3 py-1.5 rounded-xl text-xs font-black bg-slate-800 text-slate-200 cursor-pointer">🔥 Soba</button>
+          <button id="tab-btn-shop" type="button" onclick="switchCraftTab('shop')" class="px-3 py-1.5 rounded-xl text-xs font-black bg-slate-800 text-slate-200 cursor-pointer">🏪 Dyqani</button>
+        </div>
+        <button type="button" onclick="toggleCraftModal(false)" class="mc-btn px-2.5 py-1 rounded-lg text-xs font-black text-rose-300 cursor-pointer">✕</button>
+      </div>
 
-function openGroupMenu() {
-  hideAllScreens();
-  document.getElementById('menu-group').classList.remove('hidden');
-  myRoomCode = Math.random().toString(36).substring(2, 7).toUpperCase();
-  document.getElementById('room-code-text').textContent = myRoomCode;
-  document.getElementById('group-status').textContent = '';
-}
+      <div id="bag-summary" class="flex flex-wrap gap-1.5 mb-3 text-[11px] font-bold text-slate-200"></div>
 
-function hostGroupGame() {
-  if (peer) peer.destroy();
-  peer = new Peer('BLOKARENA-' + myRoomCode);
-  peer.on('open', () => {
-    document.getElementById('room-badge').textContent = 'KOD: ' + myRoomCode;
-    startGameWorld();
-  });
-  peer.on('connection', conn => {
-    connections.push(conn);
-    conn.on('data', data => handleNetData(conn.peer, data));
-    showToast('Një shok u bashkua në grup!');
-  });
-  peer.on('error', () => {
-    document.getElementById('room-badge').textContent = 'KOD: ' + myRoomCode;
-    startGameWorld();
-  });
-}
+      <div id="craft-pane-craft" class="grid grid-cols-1 sm:grid-cols-2 gap-2"></div>
 
-function joinGroupGame() {
-  const code = document.getElementById('join-code-input').value.trim().toUpperCase();
-  if (!code) return;
-  document.getElementById('group-status').textContent = 'Duke u lidhur me ' + code + '...';
-  if (peer) peer.destroy();
-  peer = new Peer();
-  peer.on('open', () => {
-    const conn = peer.connect('BLOKARENA-' + code);
-    conn.on('open', () => {
-      connections.push(conn);
-      document.getElementById('room-badge').textContent = 'KOD: ' + code;
-      startGameWorld();
-    });
-    conn.on('data', data => handleNetData(conn.peer, data));
-  });
-}
+      <div id="craft-pane-furnace" class="hidden p-3 rounded-xl bg-slate-900/90 border border-slate-700/80 space-y-2.5">
+        <div id="ui-soba-t" class="text-sm font-black text-amber-300">🔥 Soba — Qymyr + Mish/Peshk ➔ Ushqim i Pjekur</div>
+        <p id="ui-soba-d" class="text-xs text-slate-300">Përdor 1 Qymyr dhe 1 Mish të papjekur (ose Peshk) për ta pjekur në sobë/zgarë.</p>
+        <button id="btn-smelt" type="button" onclick="smeltMeat()" class="mc-btn-green px-4 py-2 rounded-xl text-xs font-black text-white cursor-pointer">🔥 Piq Mish / Peshk</button>
+      </div>
 
-function handleNetData(peerId, data) {
-  if (data.type === 'pos') {
-    if (!remotePlayers[peerId]) {
-      const mesh = createHumanoidMesh(0x38bdf8, 0x0284c7);
-      scene.add(mesh);
-      remotePlayers[peerId] = mesh;
-    }
-    remotePlayers[peerId].position.set(data.x, data.y, data.z);
-    remotePlayers[peerId].rotation.y = data.ry;
-  }
-}
+      <div id="craft-pane-shop" class="hidden space-y-2">
+        <div class="flex flex-wrap items-center justify-between gap-2 bg-slate-900/90 p-2 rounded-xl border border-emerald-500/30">
+          <div class="text-xs font-black text-emerald-300" id="shop-balance-lbl">Monedha: 0 🪙</div>
+          <button type="button" onclick="sellAllProduce()" class="mc-btn-green px-3 py-1.5 rounded-lg text-[11px] font-black text-white cursor-pointer">💰 Shit Frutat, Peshqit &amp; Mineralet</button>
+        </div>
+        <div id="shop-items-list" class="grid grid-cols-1 sm:grid-cols-2 gap-2"></div>
+      </div>
+    </div>
+  </div>
 
-let scene, camera, renderer, gameRunning = false, clock = new THREE.Clock();
+  <!-- Game Over Modal -->
+  <div id="gameover-modal" class="fixed inset-0 z-50 hidden items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md">
+    <div class="ba-panel w-full max-w-sm rounded-2xl p-5 text-center space-y-3 border-rose-500/40">
+      <div class="text-3xl">💀</div>
+      <h2 id="go-title" class="text-xl font-black text-rose-400">TI HUMBE!</h2>
+      <p id="go-stats" class="text-xs font-bold text-slate-300"></p>
+      <div class="grid grid-cols-2 gap-2 pt-1">
+        <button id="go-respawn-btn" type="button" onclick="respawnPlayer()" class="mc-btn-green py-2.5 px-3 rounded-xl text-xs font-black text-white cursor-pointer">🔄 Vazhdo Nivelin</button>
+        <button id="go-menu-btn" type="button" onclick="backToMenuFromGameOver()" class="mc-btn py-2.5 px-3 rounded-xl text-xs font-black text-slate-200 cursor-pointer">☰ Menuja</button>
+      </div>
+    </div>
+  </div>
 
-const player = {
-  pos: new THREE.Vector3(0, 1.7, 14),
-  vel: new THREE.Vector3(),
-  yaw: 0, pitch: 0, onGround: false,
-  hp: 5, maxHp: 5,
-  score: 0, level: 1,
-  coal: 2, rawMeat: 2,
-  selectedSlot: 0,
-  swordDurability: 100,
-  pickaxes: 1, goldenApples: 1, enderPearls: 2, tnt: 1, blocks: 12, waterBuckets: 1
-};
-
-let chests = [], caveOres = [], enemies = [], furnaceMesh = null, dayTime = 0, keys = {};
-
-function initThree() {
-  const canvas = document.getElementById('game-canvas');
-  scene = new THREE.Scene();
-  scene.background = new THREE.Color(0x7dd3fc);
-  scene.fog = new THREE.Fog(0x7dd3fc, 25, 115);
-
-  camera = new THREE.PerspectiveCamera(72, window.innerWidth / window.innerHeight, 0.1, 200);
-  renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
-  renderer.setSize(window.innerWidth, window.innerHeight);
-
-  window.addEventListener('resize', () => {
-    camera.aspect = window.innerWidth / window.innerHeight;
-    camera.updateProjectionMatrix();
-    renderer.setSize(window.innerWidth, window.innerHeight);
-  });
-}
-
-function createHumanoidMesh(shirtColor, pantsColor, isMonster = false) {
-  const group = new THREE.Group();
-  const matHead = new THREE.MeshLambertMaterial({ color: isMonster ? 0x4ade80 : 0xfcd34d });
-  const matBody = new THREE.MeshLambertMaterial({ color: shirtColor });
-  const matLegs = new THREE.MeshLambertMaterial({ color: pantsColor });
-
-  const head = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.7, 0.7), matHead); head.position.y = 1.75;
-  const body = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.9, 0.45), matBody); body.position.y = 0.95;
-  const legL = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.7, 0.35), matLegs); legL.position.set(-0.2, 0.35, 0);
-  const legR = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.7, 0.35), matLegs); legR.position.set(0.2, 0.35, 0);
-  const armL = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.8, 0.3), matBody); armL.position.set(-0.6, 1.0, 0);
-  const armR = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.8, 0.3), matBody); armR.position.set(0.6, 1.0, 0);
-
-  group.add(head, body, legL, legR, armL, armR);
-  return group;
-}
-
-function buildArenaWorld() {
-  while (scene.children.length > 0) scene.remove(scene.children[0]);
-  chests = []; caveOres = []; enemies = []; remotePlayers = {};
-
-  scene.add(new THREE.HemisphereLight(0xffffff, 0x334155, 0.9));
-  const sun = new THREE.DirectionalLight(0xfffbeb, 0.9);
-  sun.position.set(30, 50, 25);
-  scene.add(sun);
-
-  const ground = new THREE.Mesh(new THREE.BoxGeometry(120, 2, 120), new THREE.MeshLambertMaterial({ color: 0x22c55e }));
-  ground.position.y = -1;
-  scene.add(ground);
-
-  const lake = new THREE.Mesh(new THREE.BoxGeometry(22, 0.3, 18), new THREE.MeshLambertMaterial({ color: 0x0ea5e9, transparent: true, opacity: 0.82 }));
-  lake.position.set(-22, 0.05, -14);
-  scene.add(lake);
-
-  // Furnace near spawn
-  furnaceMesh = new THREE.Mesh(new THREE.BoxGeometry(1.5, 1.5, 1.5), new THREE.MeshLambertMaterial({ color: 0x334155 }));
-  furnaceMesh.position.set(4, 0.75, 8);
-  scene.add(furnaceMesh);
-
-  // Cave
-  const caveMat = new THREE.MeshLambertMaterial({ color: 0x475569 });
-  const wL = new THREE.Mesh(new THREE.BoxGeometry(6, 10, 22), caveMat); wL.position.set(22, 5, -15);
-  const wR = new THREE.Mesh(new THREE.BoxGeometry(6, 10, 22), caveMat); wR.position.set(36, 5, -15);
-  const roof = new THREE.Mesh(new THREE.BoxGeometry(20, 4, 22), caveMat); roof.position.set(29, 10, -15);
-  const back = new THREE.Mesh(new THREE.BoxGeometry(20, 10, 4), caveMat); back.position.set(29, 5, -25);
-  scene.add(wL, wR, roof, back);
-
-  const oreTypes = [
-    { color: 0x38bdf8, type: 'diamond', pts: 50 },
-    { color: 0xfacc15, type: 'gold', pts: 30 },
-    { color: 0x1e293b, type: 'coal', pts: 20 }
-  ];
-  for (let i = 0; i < 9; i++) {
-    const ot = oreTypes[i % 3];
-    const ore = new THREE.Mesh(new THREE.BoxGeometry(1.4, 1.4, 1.4), new THREE.MeshLambertMaterial({ color: ot.color }));
-    ore.position.set(26 + (i % 3) * 3, 1.2 + Math.floor(i / 3) * 1.6, -21);
-    ore.userData = { oreType: ot.type, pts: ot.pts };
-    scene.add(ore);
-    caveOres.push(ore);
-  }
-
-  // 4 Chests
-  const chestCoords = [[10, 0.6, 8], [-12, 0.6, 10], [29, 0.6, -15], [-16, 0.6, -26]];
-  chestCoords.forEach(([x, y, z]) => {
-    const chest = new THREE.Mesh(new THREE.BoxGeometry(1.4, 1.1, 1.1), new THREE.MeshLambertMaterial({ color: 0xb45309 }));
-    chest.position.set(x, y, z);
-    chest.userData = { opened: false };
-    scene.add(chest);
-    chests.push(chest);
-  });
-
-  spawnWave(player.level);
-}
-
-function spawnWave(lvl) {
-  const count = 3 + lvl * 2;
-  for (let i = 0; i < count; i++) {
-    const isMonster = i % 2 === 0;
-    const mesh = createHumanoidMesh(isMonster ? 0x15803d : 0xdc2626, isMonster ? 0x1e3a8a : 0x1f2937, isMonster);
-    const angle = (Math.PI * 2 * i) / count;
-    const dist = 20 + Math.random() * 18;
-    mesh.position.set(Math.cos(angle) * dist, 0, Math.sin(angle) * dist);
-    scene.add(mesh);
-    enemies.push({ mesh, hp: 2 + lvl, speed: 2.4 + lvl * 0.25, attackCooldown: 0 });
-  }
-}
-
-function startSinglePlayer() {
-  document.getElementById('room-badge').textContent = 'SOLO';
-  startGameWorld();
-}
-
-function startGameWorld() {
-  hideAllScreens();
-  document.getElementById('hud').classList.remove('hidden');
-
-  player.pos.set(0, 1.7, 14);
-  player.vel.set(0, 0, 0);
-  player.yaw = 0; player.pitch = 0;
-  player.hp = 5; player.maxHp = 5;
-  player.score = 0; player.level = 1;
-  player.coal = 2; player.rawMeat = 2;
-  player.swordDurability = 100;
-  player.pickaxes = 1; player.goldenApples = 1; player.enderPearls = 2; player.tnt = 1; player.blocks = 12; player.waterBuckets = 1;
-
-  buildArenaWorld();
-  selectSlot(0);
-  updateHUD();
-  gameRunning = true;
-
-  const canvas = document.getElementById('game-canvas');
-  if (canvas.requestPointerLock) canvas.requestPointerLock();
-}
-
-function restartGame() { startGameWorld(); }
-
-function selectSlot(idx) {
-  player.selectedSlot = idx;
-  document.querySelectorAll('.slot').forEach((el, i) => el.classList.toggle('active', i === idx));
-}
-
-function updateHUD() {
-  const t = I18N[currentLang];
-  let hearts = '';
-  for (let i = 0; i < player.maxHp; i++) hearts += i < player.hp ? '❤️' : '🖤';
-  document.getElementById('hearts-display').textContent = hearts;
-
-  const isNight = Math.sin(dayTime) < 0;
-  document.getElementById('stats-display').textContent =
-    `${t.lvl}: ${player.level} | ${t.pts}: ${player.score} | 🔥 ${t.coal}: ${player.coal} | ${isNight ? '🌙 ' + t.night : '☀️ ' + t.day}`;
-
-  document.getElementById('cnt-0').textContent = player.swordDurability + '%';
-  document.getElementById('cnt-1').textContent = player.pickaxes;
-  document.getElementById('cnt-2').textContent = player.goldenApples;
-  document.getElementById('cnt-3').textContent = player.enderPearls;
-  document.getElementById('cnt-4').textContent = player.tnt;
-  document.getElementById('cnt-5').textContent = player.blocks;
-  document.getElementById('cnt-6').textContent = player.waterBuckets;
-}
-
-function jumpPlayer() {
-  if (player.onGround) { player.vel.y = 8.5; player.onGround = false; }
-}
-
-function performPrimaryAction() {
-  if (!gameRunning) return;
-  const t = I18N[currentLang];
-  const forward = new THREE.Vector3(-Math.sin(player.yaw), 0, -Math.cos(player.yaw));
-
-  // Chests
-  for (const c of chests) {
-    if (!c.userData.opened && c.position.distanceTo(player.pos) < 3.6) {
-      c.userData.opened = true;
-      c.material.color.setHex(0x64748b);
-      player.swordDurability = 100;
-      player.goldenApples += 1;
-      player.enderPearls += 1;
-      player.tnt += 1;
-      player.coal += 1;
-      player.score += 25;
-      showToast(t.chest_opened);
-      updateHUD();
-      return;
-    }
-  }
-
-  // Furnace
-  if (furnaceMesh && furnaceMesh.position.distanceTo(player.pos) < 3.6 && player.coal > 0 && player.rawMeat > 0) {
-    player.coal--;
-    player.rawMeat--;
-    player.hp = Math.min(player.maxHp, player.hp + 2);
-    player.score += 15;
-    showToast(t.cooked_meat);
-    updateHUD();
-    return;
-  }
-
-  // Slots
-  if (player.selectedSlot === 2 && player.goldenApples > 0) {
-    player.goldenApples--;
-    player.maxHp = 7;
-    player.hp = Math.min(player.maxHp, player.hp + 3);
-    showToast(t.golden_apple);
-    updateHUD(); return;
-  }
-  if (player.selectedSlot === 3 && player.enderPearls > 0) {
-    player.enderPearls--;
-    player.pos.addScaledVector(forward, 12);
-    player.pos.y = 2.2;
-    updateHUD(); return;
-  }
-  if (player.selectedSlot === 4 && player.tnt > 0) {
-    player.tnt--;
-    const boomPos = player.pos.clone().addScaledVector(forward, 4);
-    for (let i = enemies.length - 1; i >= 0; i--) {
-      if (enemies[i].mesh.position.distanceTo(boomPos) < 8) {
-        scene.remove(enemies[i].mesh); enemies.splice(i, 1); player.score += 30;
+  <script>
+    const I18N = {
+      sq: {
+        sub: 'BLOKARENA 3D • Fshati • Liqeni • Dyqani • Kafshë',
+        backBtn: '← Mbrapa', nameLbl: 'Emri i lojtarit', modeLbl: 'Mënyra e lojës',
+        soloT: '⚔️ Vetëm', soloD: 'Kundërshtarë AI', groupT: '👥 Në grup', groupD: 'Lidhje online me kod',
+        codeLbl: 'Kodi privat i grupit (5 karaktere)', hostBtn: '👑 Krijo', joinBtn: '🔗 Hyr', genBtn: '🎲', copyBtn: '📋 Kopjo',
+        playBtn: '▶ LUAJ', soloBadge: 'Vetëm AI', groupBadge: 'Grup',
+        levelTxt: (lv) => `Niveli ${lv}`, savedTxt: (lv, k) => `💾 E ruajtur: Niveli ${lv} • Vrasje: ${k}`,
+        resetBtn: '🗑️ Botë e Re', craftHud: 'Tavolina e punës [E]', jumpTxt: 'Kërce', useTxt: 'Përdor', hitTxt: 'Godit',
+        tabCraft: '🧰 Tavolina e punës', tabFurnace: '🔥 Soba',
+        sobaT: '🔥 Soba — Qymyr + Mish/Peshk ➔ Ushqim i Pjekur',
+        sobaD: 'Përdor 1 Qymyr dhe 1 Mish ose Peshk për ta pjekur në sobë.',
+        smeltBtn: '🔥 Piq Mish / Peshk', goTitle: 'TI HUMBE!', goRespawn: '🔄 Vazhdo Nivelin', goMenu: '☰ Menuja',
+        goStats: (k, lv) => `Zemrat mbaruan • Niveli ${lv} • Vrasje: ${k}`,
+        groupLine: (code, me, role, peers) => `🔑 Kodi ${code} • ${me} (${peers} në grup)`,
+        items: {
+          wooden_sword: 'Shpatë Druri',
+          stone_sword: 'Shpatë Guri',
+          iron_sword: 'Shpatë Hekuri (Eisen)',
+          gold_sword: 'Shpatë Goldi',
+          diamond_sword: 'Shpatë Diamanti',
+          bow: 'Hark & Shigjetë',
+          pickaxe: 'Kazmë',
+          axe: 'Sëpatë',
+          potion: 'Shishe me Lëng',
+          dirt: 'Kub Dheu',
+          stone: 'Gur',
+          wood: 'Dru',
+          asphalt: 'Asfalt Rruge',
+          tiles: 'Pllaka',
+          sidewalk: 'Trotuar',
+          bed: 'Krevat',
+          table: 'Tavolinë',
+          chair: 'Stol',
+          car: 'Makinë e Kuqe',
+          police_car: 'Makinë Policie',
+          sport_car: 'Makinë Sportive',
+          taxi_car: 'Taksi',
+          suv_car: 'Xhip SUV',
+          bike: 'Biçikletë',
+          moto: 'Motorr',
+          boat: 'Varkë',
+          coal: 'Qymyr',
+          iron: 'Hekur (Eisen)',
+          gold: 'Gold',
+          diamond: 'Diamant',
+          tnt: 'Kiste TNT',
+          furnace: 'Sobë',
+          raw_meat: 'Mish i Papjekur',
+          cooked_meat: 'Mish i Pjekur',
+          apple: 'Mollë Peme',
+          fruit: 'Frutë Pylli',
+          fish: 'Peshk i Freskët',
+          fishing_rod: 'Kallam Peshkimi',
+          water_bucket: 'Kovë me Ujë',
+          ender_pearl: 'Enderperle',
+          gold_apple: 'Goldapfel'
+        },
+        recipes: [
+          { id: 'fishing_rod',   title: '🎣 Kallam Peshkimi', req: '2 Dru',             btn: 'Krijo' },
+          { id: 'boat',          title: '🚣 Varkë',           req: '3 Dru',             btn: 'Krijo' },
+          { id: 'pickaxe',       title: '⛏️ Kazmë',           req: '2 Gur / 2 Hekur',   btn: 'Krijo' },
+          { id: 'axe',           title: '🪓 Sëpatë',          req: '2 Gur / 2 Dru',     btn: 'Krijo' },
+          { id: 'bow',           title: '🏹 Hark & Shigjetë', req: '2 Dru + 1 Hekur',   btn: 'Krijo' },
+          { id: 'stone_sword',   title: '⚔️ Shpatë Guri',      req: '3 Gur',             btn: 'Krijo' },
+          { id: 'iron_sword',    title: '🗡️ Shpatë Hekuri',    req: '2 Hekur',           btn: 'Krijo' },
+          { id: 'gold_sword',    title: '🌟 Shpatë Goldi',     req: '2 Gold',            btn: 'Krijo' },
+          { id: 'diamond_sword', title: '💎 Shpatë Diamanti',  req: '2 Diamant',         btn: 'Krijo' },
+          { id: 'asphalt',       title: '🛣️ Asfalt (4x)',     req: '2 Gur + 1 Qymyr',   btn: 'Krijo' },
+          { id: 'tiles',         title: '⬜ Pllaka (4x)',     req: '2 Gur',             btn: 'Krijo' },
+          { id: 'sidewalk',      title: '🧱 Trotuar (4x)',    req: '2 Gur + 1 Dhe',     btn: 'Krijo' },
+          { id: 'bed',           title: '🛏️ Krevat',          req: '2 Dru + 1 Dhe',     btn: 'Krijo' },
+          { id: 'table',         title: '🪑 Tavolinë',        req: '2 Dru',             btn: 'Krijo' },
+          { id: 'chair',         title: '💺 Stol',            req: '1 Dru',             btn: 'Krijo' },
+          { id: 'bike',          title: '🚲 Biçikletë',       req: '2 Hekur',           btn: 'Krijo' },
+          { id: 'moto',          title: '🏍️ Motorr',          req: '3 Hekur + 1 Qymyr', btn: 'Krijo' },
+          { id: 'car',           title: '🚗 Makinë',          req: '4 Hekur + 1 Gold',  btn: 'Krijo' },
+          { id: 'tnt',           title: '🧨 Kiste për TNT',    req: '2 Qymyr + 2 Dhe',   btn: 'Krijo' },
+          { id: 'furnace',       title: '🔥 Sobë',             req: '4 Gur',             btn: 'Krijo' },
+          { id: 'water_bucket',  title: '🪣 Kovë me Ujë',      req: '2 Hekur',           btn: 'Krijo' },
+          { id: 'gold_apple',    title: '🍎 Goldapfel (+2❤️)', req: '2 Gold',            btn: 'Krijo' }
+        ]
+      },
+      de: {
+        sub: 'BLOKARENA 3D • Dorf • See • Laden • Tiere',
+        backBtn: '← Zurück', nameLbl: 'Spielername', modeLbl: 'Spielmodus',
+        soloT: '⚔️ Alleine', soloD: 'KI-Gegner', groupT: '👥 Gruppe', groupD: 'Online-Code verbinden',
+        codeLbl: 'Privater Gruppencode (5 Zeichen)', hostBtn: '👑 Erstellen', joinBtn: '🔗 Beitreten', genBtn: '🎲', copyBtn: '📋 Kopieren',
+        playBtn: '▶ SPIEL', soloBadge: 'Alleine KI', groupBadge: 'Gruppe',
+        levelTxt: (lv) => `Level ${lv}`, savedTxt: (lv, k) => `💾 Gespeichert: Level ${lv} • Besiegt: ${k}`,
+        resetBtn: '🗑️ Neue Welt', craftHud: '4er-Box [E]', jumpTxt: 'Springen', useTxt: 'Nutzen', hitTxt: 'Schlagen',
+        tabCraft: '🧰 4er-Box', tabFurnace: '🔥 Ofen',
+        sobaT: '🔥 Ofen — Kohle + Fleisch/Fisch ➔ Gebratenes Essen',
+        sobaD: 'Nutze 1 Kohle und 1 Rohes Fleisch oder Fisch zum Braten.',
+        smeltBtn: '🔥 Braten im Ofen', goTitle: 'DU BIST GESTORBEN!', goRespawn: '🔄 Level fortsetzen', goMenu: '☰ Hauptmenü',
+        goStats: (k, lv) => `Keine Herzen mehr • Level ${lv} • Besiegt: ${k}`,
+        groupLine: (code, me, role, peers) => `🔑 Code ${code} • ${me} (${peers} in Gruppe)`,
+        items: {
+          wooden_sword: 'Holzschwert', stone_sword: 'Steinschwert', iron_sword: 'Eisenschwert',
+          gold_sword: 'Goldschwert', diamond_sword: 'Diamantschwert', bow: 'Bogen & Pfeil',
+          pickaxe: 'Spitzhacke', axe: 'Axt', potion: 'Saftflasche', dirt: 'Erde-Block', stone: 'Stein', wood: 'Holz',
+          asphalt: 'Asphalt', tiles: 'Fliesen', sidewalk: 'Bürgersteig', bed: 'Bett', table: 'Tisch', chair: 'Stuhl',
+          car: 'Rotes Auto', police_car: 'Polizeiauto', sport_car: 'Sportwagen', taxi_car: 'Taxi', suv_car: 'SUV',
+          bike: 'Fahrrad', moto: 'Motorrad', boat: 'Boot', coal: 'Kohle', iron: 'Eisen', gold: 'Gold', diamond: 'Diamant',
+          tnt: 'TNT-Kiste', furnace: 'Ofen', raw_meat: 'Rohes Fleisch', cooked_meat: 'Gebratenes Fleisch',
+          apple: 'Apfel', fruit: 'Frucht', fish: 'Fisch', fishing_rod: 'Angelrute',
+          water_bucket: 'Wassereimer', ender_pearl: 'Enderperle', gold_apple: 'Goldapfel'
+        },
+        recipes: [
+          { id: 'fishing_rod',   title: '🎣 Angelrute',         req: '2 Holz',           btn: 'Bauen' },
+          { id: 'boat',          title: '🚣 Boot',              req: '3 Holz',           btn: 'Bauen' },
+          { id: 'pickaxe',       title: '⛏️ Spitzhacke',        req: '2 Stein / 2 Eisen',btn: 'Bauen' },
+          { id: 'axe',           title: '🪓 Axt',               req: '2 Stein / 2 Holz', btn: 'Bauen' },
+          { id: 'stone_sword',   title: '⚔️ Steinschwert',      req: '3 Stein',          btn: 'Bauen' },
+          { id: 'iron_sword',    title: '🗡️ Eisenschwert',      req: '2 Eisen',          btn: 'Bauen' },
+          { id: 'gold_sword',    title: '🌟 Goldschwert',       req: '2 Gold',           btn: 'Bauen' },
+          { id: 'diamond_sword', title: '💎 Diamantschwert',    req: '2 Diamant',        btn: 'Bauen' },
+          { id: 'tnt',           title: '🧨 TNT-Kiste',         req: '2 Kohle + 2 Erde', btn: 'Bauen' },
+          { id: 'furnace',       title: '🔥 Ofen',              req: '4 Stein',          btn: 'Bauen' },
+          { id: 'water_bucket',  title: '🪣 Wassereimer',       req: '2 Eisen',          btn: 'Bauen' },
+          { id: 'gold_apple',    title: '🍎 Goldapfel (+2❤️)',  req: '2 Gold',           btn: 'Bauen' }
+        ]
+      },
+      en: {
+        sub: 'BLOKARENA 3D • Village • Lake • Shop • Animals',
+        backBtn: '← Back', nameLbl: 'Player Name', modeLbl: 'Game Mode',
+        soloT: '⚔️ Solo', soloD: 'AI Opponents', groupT: '👥 Group', groupD: 'Online Room Code',
+        codeLbl: 'Private Room Code (5 chars)', hostBtn: '👑 Host', joinBtn: '🔗 Join', genBtn: '🎲', copyBtn: '📋 Copy',
+        playBtn: '▶ PLAY', soloBadge: 'Solo AI', groupBadge: 'Group',
+        levelTxt: (lv) => `Level ${lv}`, savedTxt: (lv, k) => `💾 Saved: Level ${lv} • Defeated: ${k}`,
+        resetBtn: '🗑️ New World', craftHud: '4-Slot [E]', jumpTxt: 'Jump', useTxt: 'Use', hitTxt: 'Hit',
+        tabCraft: '🧰 4-Slot', tabFurnace: '🔥 Furnace',
+        sobaT: '🔥 Furnace — Coal + Meat/Fish ➔ Cooked Food',
+        sobaD: 'Use 1 Coal and 1 Raw Meat or Fish to cook healing food.',
+        smeltBtn: '🔥 Cook Food', goTitle: 'GAME OVER!', goRespawn: '🔄 Continue Level', goMenu: '☰ Main Menu',
+        goStats: (k, lv) => `Out of Hearts • Level ${lv} • Defeated: ${k}`,
+        groupLine: (code, me, role, peers) => `🔑 Code ${code} • ${me} (${peers} in group)`,
+        items: {
+          wooden_sword: 'Wooden Sword', stone_sword: 'Stone Sword', iron_sword: 'Iron Sword',
+          gold_sword: 'Gold Sword', diamond_sword: 'Diamond Sword', bow: 'Bow & Arrow',
+          pickaxe: 'Pickaxe', axe: 'Axe', potion: 'Juice Bottle', dirt: 'Dirt Block', stone: 'Stone', wood: 'Wood',
+          asphalt: 'Asphalt', tiles: 'Tiles', sidewalk: 'Sidewalk', bed: 'Bed', table: 'Table', chair: 'Chair',
+          car: 'Red Car', police_car: 'Police Car', sport_car: 'Sports Car', taxi_car: 'Taxi', suv_car: 'SUV',
+          bike: 'Bicycle', moto: 'Motorcycle', boat: 'Boat', coal: 'Coal', iron: 'Iron', gold: 'Gold', diamond: 'Diamond',
+          tnt: 'TNT Crate', furnace: 'Furnace', raw_meat: 'Raw Meat', cooked_meat: 'Cooked Meat',
+          apple: 'Apple', fruit: 'Fruit', fish: 'Fresh Fish', fishing_rod: 'Fishing Rod',
+          water_bucket: 'Water Bucket', ender_pearl: 'Ender Pearl', gold_apple: 'Golden Apple'
+        },
+        recipes: [
+          { id: 'fishing_rod',   title: '🎣 Fishing Rod',         req: '2 Wood',           btn: 'Craft' },
+          { id: 'boat',          title: '🚣 Boat',                req: '3 Wood',           btn: 'Craft' },
+          { id: 'pickaxe',       title: '⛏️ Pickaxe',             req: '2 Stone / 2 Iron', btn: 'Craft' },
+          { id: 'axe',           title: '🪓 Axe',                 req: '2 Stone / 2 Wood', btn: 'Craft' },
+          { id: 'stone_sword',   title: '⚔️ Stone Sword',         req: '3 Stone',          btn: 'Craft' },
+          { id: 'iron_sword',    title: '🗡️ Iron Sword',          req: '2 Iron',           btn: 'Craft' },
+          { id: 'gold_sword',    title: '🌟 Gold Sword',          req: '2 Gold',           btn: 'Craft' },
+          { id: 'diamond_sword', title: '💎 Diamond Sword',       req: '2 Diamond',        btn: 'Craft' },
+          { id: 'tnt',           title: '🧨 TNT Crate',           req: '2 Coal + 2 Dirt',  btn: 'Craft' },
+          { id: 'furnace',       title: '🔥 Furnace',             req: '4 Stone',          btn: 'Craft' },
+          { id: 'water_bucket',  title: '🪣 Water Bucket',        req: '2 Iron',           btn: 'Craft' },
+          { id: 'gold_apple',    title: '🍎 Golden Apple (+2❤️)', req: '2 Gold',           btn: 'Craft' }
+        ]
+      },
+      tr: {
+        sub: 'BLOKARENA 3D • Köy • Göl • Mağaza • Hayvanlar',
+        backBtn: '← Geri', nameLbl: 'Oyuncu Adı', modeLbl: 'Oyun Modu',
+        soloT: '⚔️ Tekli', soloD: 'Yapay Zeka', groupT: '👥 Grup', groupD: 'Kod ile Bağlan',
+        codeLbl: 'Özel Grup Kodu (5 karakter)', hostBtn: '👑 Kur', joinBtn: '🔗 Katıl', genBtn: '🎲', copyBtn: '📋 Kopyala',
+        playBtn: '▶ OYNA', soloBadge: 'Tekli YZ', groupBadge: 'Grup',
+        levelTxt: (lv) => `Seviye ${lv}`, savedTxt: (lv, k) => `💾 Kaydedildi: Seviye ${lv} • Yenilen: ${k}`,
+        resetBtn: '🗑️ Yeni Dünya', craftHud: '4’lü Kutu [E]', jumpTxt: 'Zıpla', useTxt: 'Kullan', hitTxt: 'Vur',
+        tabCraft: '🧰 4’lü Kutu', tabFurnace: '🔥 Fırın',
+        sobaT: '🔥 Fırın — Kömür + Et/Balık ➔ Pişmiş Yemek',
+        sobaD: '1 Kömür ve 1 Çiğ Et veya Balık ile fırında pişir.',
+        smeltBtn: '🔥 Fırında Pişir', goTitle: 'KAYBETTİN!', goRespawn: '🔄 Seviyeye Devam', goMenu: '☰ Ana Menü',
+        goStats: (k, lv) => `Canlar bitti • Seviye ${lv} • Yenilen: ${k}`,
+        groupLine: (code, me, role, peers) => `🔑 Kod ${code} • ${me} (${peers} grupta)`,
+        items: {
+          wooden_sword: 'Tahta Kılıç', stone_sword: 'Taş Kılıç', iron_sword: 'Demir Kılıç',
+          gold_sword: 'Altın Kılıç', diamond_sword: 'Elmas Kılıç', bow: 'Yay & Ok',
+          pickaxe: 'Kazma', axe: 'Balta', potion: 'İksir Şişesi', dirt: 'Toprak Blok', stone: 'Taş', wood: 'Odun',
+          asphalt: 'Asfalt', tiles: 'Fayans', sidewalk: 'Kaldırım', bed: 'Yatak', table: 'Masa', chair: 'Sandalye',
+          car: 'Kırmızı Araba', police_car: 'Polis Arabası', sport_car: 'Spor Araba', taxi_car: 'Taksi', suv_car: 'SUV',
+          bike: 'Bisiklet', moto: 'Motosiklet', boat: 'Tekne', coal: 'Kömür', iron: 'Demir', gold: 'Altın', diamond: 'Elmas',
+          tnt: 'TNT Sandığı', furnace: 'Fırın', raw_meat: 'Çiğ Et', cooked_meat: 'Pişmiş Et',
+          apple: 'Elma', fruit: 'Meyve', fish: 'Taze Balık', fishing_rod: 'Olta',
+          water_bucket: 'Su Kovası', ender_pearl: 'Ender İncisi', gold_apple: 'Altın Elma'
+        },
+        recipes: [
+          { id: 'fishing_rod',   title: '🎣 Olta',                req: '2 Odun',             btn: 'Yap' },
+          { id: 'boat',          title: '🚣 Tekne',               req: '3 Odun',             btn: 'Yap' },
+          { id: 'pickaxe',       title: '⛏️ Kazma',               req: '2 Taş / 2 Demir',    btn: 'Yap' },
+          { id: 'axe',           title: '🪓 Balta',               req: '2 Taş / 2 Odun',     btn: 'Yap' },
+          { id: 'stone_sword',   title: '⚔️ Taş Kılıç',           req: '3 Taş',              btn: 'Yap' },
+          { id: 'iron_sword',    title: '🗡️ Demir Kılıç',         req: '2 Demir',            btn: 'Yap' },
+          { id: 'gold_sword',    title: '🌟 Altın Kılıç',         req: '2 Altın',            btn: 'Yap' },
+          { id: 'diamond_sword', title: '💎 Elmas Kılıç',         req: '2 Elmas',            btn: 'Yap' },
+          { id: 'tnt',           title: '🧨 TNT Sandığı',         req: '2 Kömür + 2 Toprak', btn: 'Yap' },
+          { id: 'furnace',       title: '🔥 Fırın',               req: '4 Taş',              btn: 'Yap' },
+          { id: 'water_bucket',  title: '🪣 Su Kovası',           req: '2 Demir',            btn: 'Yap' },
+          { id: 'gold_apple',    title: '🍎 Altın Elma (+2❤️)',   req: '2 Altın',            btn: 'Yap' }
+        ]
       }
-    }
-    checkWaveClear(); updateHUD(); return;
-  }
-  if (player.selectedSlot === 5 && player.blocks > 0) {
-    player.blocks--;
-    const bPos = player.pos.clone().addScaledVector(forward, 3);
-    const blk = new THREE.Mesh(new THREE.BoxGeometry(1.5, 1.5, 1.5), new THREE.MeshLambertMaterial({ color: 0x92400e }));
-    blk.position.set(Math.round(bPos.x), 0.75, Math.round(bPos.z));
-    scene.add(blk);
-    updateHUD(); return;
-  }
-  if (player.selectedSlot === 6 && player.waterBuckets > 0) {
-    player.waterBuckets--;
-    const wPos = player.pos.clone().addScaledVector(forward, 3);
-    const water = new THREE.Mesh(new THREE.BoxGeometry(2.5, 0.25, 2.5), new THREE.MeshLambertMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.78 }));
-    water.position.set(wPos.x, 0.12, wPos.z);
-    scene.add(water);
-    showToast(t.water_placed);
-    updateHUD(); return;
-  }
+    };
 
-  // Cave Ores
-  for (let i = caveOres.length - 1; i >= 0; i--) {
-    if (caveOres[i].position.distanceTo(player.pos) < 3.8) {
-      if (caveOres[i].userData.oreType === 'coal') player.coal++;
-      player.score += caveOres[i].userData.pts;
-      scene.remove(caveOres[i]); caveOres.splice(i, 1);
-      updateHUD(); return;
-    }
-  }
+    let currentLang = 'sq';
+    function L() { return I18N[currentLang] || I18N.sq; }
+    function isTouchDevice() { return ('ontouchstart' in window) || (navigator.maxTouchPoints > 0); }
 
-  // Enemies
-  const dmg = (player.selectedSlot === 0 && player.swordDurability > 0) ? 2 : 1;
-  for (let i = enemies.length - 1; i >= 0; i--) {
-    const e = enemies[i];
-    if (e.mesh.position.distanceTo(player.pos) < 4.0) {
-      e.hp -= dmg;
-      if (player.selectedSlot === 0 && player.swordDurability > 0) {
-        player.swordDurability = Math.max(0, player.swordDurability - 5);
-      }
-      e.mesh.position.addScaledVector(forward, 1.8);
-      if (e.hp <= 0) {
-        scene.remove(e.mesh); enemies.splice(i, 1);
-        player.score += 20; player.rawMeat += 1;
-      }
-      checkWaveClear(); updateHUD(); return;
-    }
-  }
-}
-
-function checkWaveClear() {
-  if (enemies.length === 0) {
-    player.level++;
-    showToast(I18N[currentLang].level_up + player.level + '!');
-    spawnWave(player.level);
-  }
-}
-
-window.addEventListener('keydown', e => {
-  keys[e.code] = true;
-  if (!gameRunning) return;
-  if (e.code === 'Space') jumpPlayer();
-  if (e.code === 'KeyE') performPrimaryAction();
-  if (e.code === 'Digit1') selectSlot(0);
-  if (e.code === 'Digit2') selectSlot(1);
-  if (e.code === 'Digit3') selectSlot(2);
-  if (e.code === 'Digit4') selectSlot(3);
-  if (e.code === 'Digit5') selectSlot(4);
-  if (e.code === 'Digit6') selectSlot(5);
-  if (e.code === 'Digit7') selectSlot(6);
-});
-window.addEventListener('keyup', e => { keys[e.code] = false; });
-
-window.addEventListener('mousedown', e => {
-  if (!gameRunning) return;
-  const canvas = document.getElementById('game-canvas');
-  if (document.pointerLockElement !== canvas && canvas.requestPointerLock) canvas.requestPointerLock();
-  if (e.button === 0) performPrimaryAction();
-});
-
-window.addEventListener('mousemove', e => {
-  if (!gameRunning) return;
-  if (document.pointerLockElement === document.getElementById('game-canvas') || e.buttons === 1) {
-    player.yaw -= e.movementX * 0.0025;
-    player.pitch = Math.max(-1.3, Math.min(1.3, player.pitch - e.movementY * 0.0025));
-  }
-});
-
-let netTick = 0;
-function animate() {
-  requestAnimationFrame(animate);
-  const dt = Math.min(0.05, clock.getDelta());
-
-  if (gameRunning) {
-    dayTime += dt * 0.08;
-    const sunFactor = (Math.sin(dayTime) + 1) * 0.5;
-    scene.background.setRGB(0.08 + sunFactor * 0.42, 0.12 + sunFactor * 0.70, 0.22 + sunFactor * 0.76);
-    scene.fog.color.copy(scene.background);
-
-    const speed = 9.0;
-    const forward = new THREE.Vector3(-Math.sin(player.yaw), 0, -Math.cos(player.yaw));
-    const right = new THREE.Vector3(Math.cos(player.yaw), 0, -Math.sin(player.yaw));
-    const move = new THREE.Vector3();
-
-    if (keys['KeyW'] || keys['ArrowUp']) move.add(forward);
-    if (keys['KeyS'] || keys['ArrowDown']) move.sub(forward);
-    if (keys['KeyD'] || keys['ArrowRight']) move.add(right);
-    if (keys['KeyA'] || keys['ArrowLeft']) move.sub(right);
-    if (move.lengthSq() > 0) move.normalize().multiplyScalar(speed);
-
-    player.pos.x = Math.max(-56, Math.min(56, player.pos.x + move.x * dt));
-    player.pos.z = Math.max(-56, Math.min(56, player.pos.z + move.z * dt));
-
-    player.vel.y -= 22 * dt;
-    player.pos.y += player.vel.y * dt;
-    if (player.pos.y <= 1.7) { player.pos.y = 1.7; player.vel.y = 0; player.onGround = true; }
-
-    camera.position.copy(player.pos);
-    camera.rotation.order = 'YXZ';
-    camera.rotation.y = player.yaw;
-    camera.rotation.x = player.pitch;
-
-    for (const e of enemies) {
-      const toPlayer = new THREE.Vector3().subVectors(player.pos, e.mesh.position);
-      toPlayer.y = 0;
-      const dist = toPlayer.length();
-      if (dist > 1.8) {
-        toPlayer.normalize();
-        e.mesh.position.addScaledVector(toPlayer, e.speed * dt);
-        e.mesh.rotation.y = Math.atan2(toPlayer.x, toPlayer.z);
-      } else {
-        e.attackCooldown -= dt;
-        if (e.attackCooldown <= 0) {
-          e.attackCooldown = 1.3;
-          player.hp = Math.max(0, player.hp - 1);
-          updateHUD();
-          if (player.hp <= 0) {
-            gameRunning = false;
-            if (document.pointerLockElement) document.exitPointerLock();
-            document.getElementById('hud').classList.add('hidden');
-            document.getElementById('final-stats').textContent =
-              `${I18N[currentLang].lvl}: ${player.level} | ${I18N[currentLang].pts}: ${player.score}`;
-            document.getElementById('menu-gameover').classList.remove('hidden');
+    const SFX = {
+      ctx: null,
+      sirenTimer: null,
+      sirenOn: false,
+      engineTick: 0,
+      init() {
+        try {
+          if (!this.ctx) {
+            const AC = window.AudioContext || window.webkitAudioContext;
+            if (AC) this.ctx = new AC();
           }
+          if (this.ctx && this.ctx.state === 'suspended') this.ctx.resume().catch(() => {});
+        } catch (e) {}
+      },
+      entitySound(kind = 'player') {
+        this.init();
+        if (!this.ctx) return;
+        try {
+          const now = this.ctx.currentTime;
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          if (kind === 'lion' || kind === 'tiger' || kind === 'leopard') {
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(145, now);
+            osc.frequency.exponentialRampToValueAtTime(68, now + 0.34);
+            gain.gain.setValueAtTime(0.22, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.36);
+            osc.connect(gain); gain.connect(this.ctx.destination);
+            osc.start(now); osc.stop(now + 0.37);
+          } else if (kind === 'dog') {
+            osc.type = 'square';
+            osc.frequency.setValueAtTime(320, now);
+            osc.frequency.exponentialRampToValueAtTime(160, now + 0.14);
+            gain.gain.setValueAtTime(0.18, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.16);
+            osc.connect(gain); gain.connect(this.ctx.destination);
+            osc.start(now); osc.stop(now + 0.17);
+          } else if (kind === 'monkey') {
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(620, now);
+            osc.frequency.linearRampToValueAtTime(880, now + 0.08);
+            osc.frequency.linearRampToValueAtTime(540, now + 0.18);
+            gain.gain.setValueAtTime(0.16, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+            osc.connect(gain); gain.connect(this.ctx.destination);
+            osc.start(now); osc.stop(now + 0.21);
+          } else if (kind === 'food_animal') {
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(210, now);
+            osc.frequency.linearRampToValueAtTime(185, now + 0.25);
+            gain.gain.setValueAtTime(0.16, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.26);
+            osc.connect(gain); gain.connect(this.ctx.destination);
+            osc.start(now); osc.stop(now + 0.27);
+          } else {
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(175, now);
+            osc.frequency.exponentialRampToValueAtTime(75, now + 0.11);
+            gain.gain.setValueAtTime(0.2, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+            osc.connect(gain); gain.connect(this.ctx.destination);
+            osc.start(now); osc.stop(now + 0.13);
+          }
+        } catch (e) {}
+      },
+      horn() {
+        this.init();
+        if (!this.ctx) return;
+        try {
+          const now = this.ctx.currentTime;
+          [340, 425].forEach(freq => {
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(freq, now);
+            gain.gain.setValueAtTime(0.11, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.34);
+            osc.connect(gain); gain.connect(this.ctx.destination);
+            osc.start(now); osc.stop(now + 0.35);
+          });
+        } catch (e) {}
+      },
+      sirenPulse() {
+        this.init();
+        if (!this.ctx) return;
+        try {
+          const now = this.ctx.currentTime;
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(660, now);
+          osc.frequency.linearRampToValueAtTime(920, now + 0.25);
+          osc.frequency.linearRampToValueAtTime(640, now + 0.55);
+          gain.gain.setValueAtTime(0.12, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.58);
+          osc.connect(gain); gain.connect(this.ctx.destination);
+          osc.start(now); osc.stop(now + 0.6);
+        } catch (e) {}
+      },
+      engineHum(speedRatio = 1.0) {
+        this.init();
+        if (!this.ctx) return;
+        try {
+          const now = this.ctx.currentTime;
+          const osc = this.ctx.createOscillator();
+          const filter = this.ctx.createBiquadFilter();
+          const gain = this.ctx.createGain();
+          osc.type = 'sawtooth';
+          osc.frequency.setValueAtTime(52 + speedRatio * 48, now);
+          filter.type = 'lowpass';
+          filter.frequency.value = 180;
+          gain.gain.setValueAtTime(0.055, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.14);
+          osc.connect(filter); filter.connect(gain); gain.connect(this.ctx.destination);
+          osc.start(now); osc.stop(now + 0.15);
+        } catch (e) {}
+      },
+      pop(f1 = 440, f2 = 760, dur = 0.11) {
+        this.init();
+        if (!this.ctx) return;
+        try {
+          const now = this.ctx.currentTime;
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(f1, now);
+          osc.frequency.exponentialRampToValueAtTime(f2, now + dur);
+          gain.gain.setValueAtTime(0.14, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + dur);
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start(now);
+          osc.stop(now + dur + 0.01);
+        } catch (e) {}
+      },
+      boom() {
+        this.init();
+        if (!this.ctx) return;
+        try {
+          const now = this.ctx.currentTime;
+          const len = Math.floor(this.ctx.sampleRate * 0.35);
+          const buf = this.ctx.createBuffer(1, len, this.ctx.sampleRate);
+          const ch = buf.getChannelData(0);
+          for (let i = 0; i < len; i++) ch[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 1.8);
+          const src = this.ctx.createBufferSource();
+          src.buffer = buf;
+          const filter = this.ctx.createBiquadFilter();
+          filter.type = 'lowpass';
+          filter.frequency.value = 260;
+          const gain = this.ctx.createGain();
+          gain.gain.setValueAtTime(0.32, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+          src.connect(filter);
+          filter.connect(gain);
+          gain.connect(this.ctx.destination);
+          src.start(now);
+        } catch (e) {}
+      }
+    };
+
+    function toggleSiren() {
+      const btn = document.getElementById('btn-siren');
+      if (SFX.sirenOn) {
+        SFX.sirenOn = false;
+        if (SFX.sirenTimer) clearInterval(SFX.sirenTimer);
+        if (btn) btn.classList.remove('voice-live');
+      } else {
+        SFX.sirenOn = true;
+        SFX.sirenPulse();
+        if (btn) btn.classList.add('voice-live');
+        SFX.sirenTimer = setInterval(() => {
+          if (SFX.sirenOn && State.running) SFX.sirenPulse();
+        }, 620);
+      }
+    }
+
+    const ITEMS = {
+      wooden_sword:  { icon: '🗡️', type: 'sword',   dmg: 6.5,  hex: 0xb45309 },
+      stone_sword:   { icon: '⚔️', type: 'sword',   dmg: 8.5,  hex: 0x94a3b8 },
+      iron_sword:    { icon: '🗡️', type: 'sword',   dmg: 11.0, hex: 0xe2e8f0 },
+      gold_sword:    { icon: '🌟', type: 'sword',   dmg: 13.0, hex: 0xfacc15 },
+      diamond_sword: { icon: '💎', type: 'sword',   dmg: 16.5, hex: 0x22d3ee },
+      bow:           { icon: '🏹', type: 'bow',     dmg: 9.0,  hex: 0xd97706 },
+      pickaxe:       { icon: '⛏️', type: 'tool',    hex: 0x38bdf8 },
+      axe:           { icon: '🪓', type: 'axe',     hex: 0xf59e0b },
+      potion:        { icon: '🧪', type: 'potion',  hex: 0xfacc15 },
+      dirt:          { icon: '🟫', type: 'block',   block: 'dirt',     hex: 0x7c5338 },
+      stone:         { icon: '🪨', type: 'block',   block: 'stone',    hex: 0x64748b },
+      wood:          { icon: '🪵', type: 'block',   block: 'wood',     hex: 0x92400e },
+      asphalt:       { icon: '🛣️', type: 'block',   block: 'asphalt',  hex: 0x1e293b },
+      tiles:         { icon: '⬜', type: 'block',   block: 'tiles',    hex: 0xe2e8f0 },
+      sidewalk:      { icon: '🧱', type: 'block',   block: 'sidewalk', hex: 0x94a3b8 },
+      bed:           { icon: '🛏️', type: 'block',   block: 'bed',      hex: 0xef4444 },
+      table:         { icon: '🪑', type: 'block',   block: 'table',    hex: 0xb45309 },
+      chair:         { icon: '💺', type: 'block',   block: 'chair',    hex: 0xd97706 },
+      car:           { icon: '🚗', type: 'vehicle', speed: 15.5,       hex: 0xef4444 },
+      police_car:    { icon: '🚓', type: 'vehicle', speed: 17.5,       hex: 0x1d4ed8 },
+      sport_car:     { icon: '🏎️', type: 'vehicle', speed: 19.5,       hex: 0xfacc15 },
+      taxi_car:      { icon: '🚕', type: 'vehicle', speed: 14.8,       hex: 0xf59e0b },
+      suv_car:       { icon: '🚙', type: 'vehicle', speed: 15.0,       hex: 0x10b981 },
+      bike:          { icon: '🚲', type: 'vehicle', speed: 10.5,       hex: 0x38bdf8 },
+      moto:          { icon: '🏍️', type: 'vehicle', speed: 13.8,       hex: 0xf97316 },
+      boat:          { icon: '🚣', type: 'vehicle', speed: 12.5,       hex: 0x92400e },
+      coal:          { icon: '⚫', type: 'res',     hex: 0x334155 },
+      iron:          { icon: '⚙️', type: 'res',     hex: 0xcbd5e1 },
+      gold:          { icon: '🪙', type: 'res',     hex: 0xfbbf24 },
+      diamond:       { icon: '💠', type: 'res',     hex: 0x06b6d4 },
+      tnt:           { icon: '🧨', type: 'tnt',     hex: 0xef4444 },
+      furnace:       { icon: '🔥', type: 'block',   block: 'furnace',  hex: 0x475569 },
+      raw_meat:      { icon: '🥩', type: 'food',    heal: 3, hex: 0xf87171 },
+      cooked_meat:   { icon: '🍖', type: 'food',    heal: 6, hex: 0xb45309 },
+      apple:         { icon: '🍎', type: 'food',    heal: 2, hex: 0xef4444 },
+      fruit:         { icon: '🍒', type: 'food',    heal: 2, hex: 0xec4899 },
+      fish:          { icon: '🐟', type: 'food',    heal: 4, hex: 0x38bdf8 },
+      fishing_rod:   { icon: '🎣', type: 'rod',     hex: 0xd97706 },
+      water_bucket:  { icon: '🪣', type: 'bucket',  hex: 0x0ea5e9 },
+      ender_pearl:   { icon: '🟣', type: 'pearl',   hex: 0xa855f7 },
+      gold_apple:    { icon: '🍏', type: 'gapple',  hex: 0xf59e0b }
+    };
+
+    const State = {
+      running: false,
+      sceneReady: false,
+      name: 'ArenaHero',
+      mode: 'solo',
+      groupRole: 'host',
+      code: 'B7K4P',
+      level: 1,
+      waveKills: 0,
+      waveGoal: 5,
+      hp: 20,
+      bonusHearts: 0,
+      coins: 0,
+      kills: 0,
+      combatUnlocked: false,
+      lastHurtAt: 0,
+      lastCombatAt: 0,
+      regenAccum: 0,
+      attackCd: 0,
+      worldTime: 0.16,
+      swordPower: 100,
+      gaUntil: 0,
+      thirdPerson: false,
+      crouching: false,
+      ridingVehicle: null,
+      slot: 0,
+      bag: { dirt: 4, stone: 2, wood: 3, coal: 0, iron: 0, gold: 0, diamond: 0, raw_meat: 0, apple: 0, fruit: 0, fish: 0, asphalt: 0, tiles: 0, sidewalk: 0 },
+      hotbar: [
+        { id: 'fishing_rod', count: 1 },
+        { id: null, count: 0 },
+        { id: null, count: 0 },
+        { id: 'dirt', count: 4 },
+        { id: 'wood', count: 3 },
+        { id: 'stone', count: 2 },
+        { id: null, count: 0 },
+        { id: null, count: 0 },
+        { id: null, count: 0 }
+      ]
+    };
+
+    const SAVE_KEY = 'blokarena_save_v7';
+    const worldEdits = new Map();
+
+    function hasGoldHearts() { return Date.now() < State.gaUntil; }
+    function maxHpNow() { return (hasGoldHearts() ? 24 : 20) + (State.bonusHearts || 0) * 2; }
+
+    function saveProgress(flashBtn = false) {
+      try {
+        const payload = {
+          name: State.name, level: State.level, waveKills: State.waveKills, waveGoal: State.waveGoal,
+          hp: Math.max(2, State.hp), bonusHearts: State.bonusHearts || 0, coins: State.coins || 0,
+          combatUnlocked: !!State.combatUnlocked, kills: State.kills, swordPower: State.swordPower,
+          slot: State.slot, bag: State.bag, hotbar: State.hotbar,
+          edits: Array.from(worldEdits.entries()).slice(-400)
+        };
+        localStorage.setItem(SAVE_KEY, JSON.stringify(payload));
+        if (flashBtn) {
+          SFX.pop(540, 780, 0.09);
+          const b = document.getElementById('btn-save-now');
+          if (b) { b.textContent = '✅'; setTimeout(() => { b.textContent = '💾'; }, 900); }
+        }
+      } catch (e) {}
+    }
+
+    function loadSavedProgress() {
+      try {
+        const raw = localStorage.getItem(SAVE_KEY);
+        if (!raw) return false;
+        const d = JSON.parse(raw);
+        if (!d || typeof d !== 'object') return false;
+        if (d.name) State.name = d.name;
+        if (d.level) State.level = d.level;
+        if (typeof d.waveKills === 'number') State.waveKills = d.waveKills;
+        if (typeof d.waveGoal === 'number') State.waveGoal = d.waveGoal;
+        if (typeof d.bonusHearts === 'number') State.bonusHearts = d.bonusHearts;
+        if (typeof d.coins === 'number') State.coins = d.coins;
+        if (typeof d.combatUnlocked === 'boolean') State.combatUnlocked = d.combatUnlocked;
+        if (typeof d.hp === 'number') State.hp = Math.max(4, Math.min(30, d.hp));
+        if (typeof d.kills === 'number') State.kills = d.kills;
+        if (typeof d.swordPower === 'number') State.swordPower = d.swordPower;
+        if (typeof d.slot === 'number') State.slot = d.slot;
+        if (d.bag) Object.assign(State.bag, d.bag);
+        if (Array.isArray(d.hotbar) && d.hotbar.length === 9) State.hotbar = d.hotbar;
+        if (Array.isArray(d.edits)) {
+          worldEdits.clear();
+          d.edits.forEach(([k, v]) => worldEdits.set(k, v));
+        }
+        document.getElementById('input-name').value = State.name;
+        const sb = document.getElementById('save-banner');
+        sb.classList.remove('hidden');
+        document.getElementById('save-banner-txt').textContent = L().savedTxt(State.level, State.kills);
+        return true;
+      } catch (e) { return false; }
+    }
+
+    let voiceActive = false, voiceStream = null, voiceAnim = null, groupChannel = null, peerNet = null;
+    let scene = null, camera = null, renderer = null, sunLight = null, hemiLight = null;
+    let handPivot = null, handItemGroup = null, handSwing = 0, targetBox = null;
+    let pointerLockCooldownUntil = 0;
+    const remoteConns = new Map(), remotePlayers = new Map(), remoteAudios = new Map();
+
+    function refreshGroupStatus() {
+      const codeEl = document.getElementById('input-code');
+      const nameEl = document.getElementById('input-name');
+      const lineEl = document.getElementById('group-status-line');
+      if (!codeEl || !nameEl || !lineEl) return;
+      const code = (codeEl.value || State.code || 'B7K4P').toUpperCase().slice(0, 5);
+      const me = (nameEl.value || State.name || 'ArenaHero').trim();
+      const peers = remoteConns.size + remotePlayers.size;
+      lineEl.textContent = L().groupLine(code, me, State.groupRole, peers);
+    }
+
+    function broadcastNet(msg) {
+      const payload = Object.assign({}, msg, { code: State.code, from: State.name });
+      for (const [, conn] of remoteConns) {
+        try { if (conn && conn.open) conn.send(payload); } catch (e) {}
+      }
+      try { if (groupChannel) groupChannel.postMessage(payload); } catch (e) {}
+    }
+
+    function handleNetData(peerId, data) {
+      if (!data || data.code !== State.code) return;
+      if (data.type === 'state') {
+        let rp = remotePlayers.get(peerId);
+        if (!rp && scene && typeof makeDoll === 'function') {
+          const mesh = makeDoll({ skin: 0xfdba74, armor: 0x0284c7, accent: 0x38bdf8, pants: 0x1e293b, visor: 0x38bdf8, label: data.name || 'Lojtar' });
+          scene.add(mesh);
+          rp = { mesh, name: data.name || 'Lojtar', phase: 0 };
+          remotePlayers.set(peerId, rp);
+          refreshGroupStatus();
+        }
+        if (rp) {
+          rp.name = data.name || rp.name;
+          rp.mesh.position.set(data.x, data.y - 1.25, data.z);
+          rp.mesh.rotation.y = data.yaw || 0;
+          rp.phase += 0.24;
+          const rig = rp.mesh.userData.rig;
+          if (rig) {
+            const sw = Math.sin(rp.phase) * 0.45;
+            rig.lLeg.rotation.x = sw;
+            rig.rLeg.rotation.x = -sw;
+          }
+        }
+        if (State.groupRole === 'host') {
+          for (const [id, c] of remoteConns) {
+            if (id !== peerId && c && c.open) {
+              try { c.send(Object.assign({}, data, { relayId: peerId })); } catch (e) {}
+            }
+          }
+        }
+      } else if (data.type === 'block') {
+        if (data.block === null) delBlock(data.x, data.y, data.z, true);
+        else setBlock(data.x, data.y, data.z, data.block, true);
+      } else if (data.type === 'leave') {
+        const rp = remotePlayers.get(peerId);
+        if (rp && scene) scene.remove(rp.mesh);
+        remotePlayers.delete(peerId);
+        refreshGroupStatus();
+      }
+    }
+
+    function bindMediaCall(call) {
+      if (!call) return;
+      call.on('stream', stream => {
+        let el = remoteAudios.get(call.peer);
+        if (!el) {
+          el = document.createElement('audio');
+          el.autoplay = true;
+          el.playsInline = true;
+          document.body.appendChild(el);
+          remoteAudios.set(call.peer, el);
+        }
+        el.srcObject = stream;
+        el.play().catch(() => {});
+      });
+    }
+
+    function attachDataConn(conn) {
+      if (!conn) return;
+      conn.on('open', () => {
+        remoteConns.set(conn.peer, conn);
+        refreshGroupStatus();
+        if (voiceActive && voiceStream && peerNet) {
+          try { bindMediaCall(peerNet.call(conn.peer, voiceStream)); } catch (e) {}
+        }
+      });
+      conn.on('data', d => handleNetData(d.relayId || conn.peer, d));
+      conn.on('close', () => {
+        remoteConns.delete(conn.peer);
+        const rp = remotePlayers.get(conn.peer);
+        if (rp && scene) scene.remove(rp.mesh);
+        remotePlayers.delete(conn.peer);
+        refreshGroupStatus();
+      });
+    }
+
+    function connectGroupChannel() {
+      try {
+        if (groupChannel) groupChannel.close();
+        if ('BroadcastChannel' in window) {
+          groupChannel = new BroadcastChannel('blokarena_room_' + State.code);
+          groupChannel.onmessage = ev => handleNetData('tab_' + (ev.data && ev.data.from ? ev.data.from : 'p2'), ev.data);
+        }
+      } catch (e) {}
+      try {
+        if (peerNet) { try { peerNet.destroy(); } catch (e) {} peerNet = null; }
+        remoteConns.clear();
+        if (typeof window.Peer === 'undefined' || window.__peerFailed) return;
+        const roomPeerId = 'blokarena-' + State.code.toLowerCase();
+        peerNet = State.groupRole === 'host' ? new window.Peer(roomPeerId) : new window.Peer();
+        peerNet.on('open', () => {
+          const dot = document.getElementById('net-dot');
+          if (dot) dot.className = 'w-2.5 h-2.5 rounded-full bg-sky-400 shadow-[0_0_8px_#38bdf8]';
+          if (State.groupRole === 'join') attachDataConn(peerNet.connect(roomPeerId, { reliable: true }));
+          refreshGroupStatus();
+        });
+        peerNet.on('connection', conn => attachDataConn(conn));
+        peerNet.on('call', call => { call.answer(voiceStream || undefined); bindMediaCall(call); });
+        peerNet.on('error', err => {
+          if (err && err.type === 'unavailable-id' && State.groupRole === 'host') {
+            State.groupRole = 'join'; setGroupRole('join'); connectGroupChannel();
+          }
+        });
+      } catch (e) {}
+    }
+
+    async function toggleVoiceChat() {
+      SFX.init();
+      const btn = document.getElementById('btn-voice');
+      const bars = document.getElementById('voice-bars');
+      if (voiceActive) {
+        voiceActive = false;
+        if (voiceStream) { voiceStream.getTracks().forEach(t => t.stop()); voiceStream = null; }
+        if (voiceAnim) clearInterval(voiceAnim);
+        btn.classList.remove('voice-live'); bars.classList.add('hidden'); bars.classList.remove('flex');
+        return;
+      }
+      voiceActive = true;
+      btn.classList.add('voice-live'); bars.classList.remove('hidden'); bars.classList.add('flex');
+      try {
+        if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+          voiceStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          if (peerNet && voiceStream) {
+            for (const [peerId] of remoteConns) {
+              try { bindMediaCall(peerNet.call(peerId, voiceStream)); } catch (e) {}
+            }
+          }
+        }
+      } catch (e) {}
+      voiceAnim = setInterval(() => {
+        if (!voiceActive) return;
+        bars.querySelectorAll('i').forEach(bar => { bar.style.height = (4 + Math.floor(Math.random() * 10)) + 'px'; });
+      }, 150);
+    }
+
+    const blocks = new Map();
+    const chests = [];
+    const mobs = [];
+    const pearls = [];
+    const arrows = [];
+    const puddles = [];
+    const parkedVehicles = [];
+    const lakeFishes = [];
+    const coinPickups = [];
+    let playerPos = null, playerVel = null, playerThirdPersonMesh = null;
+    let yaw = 0, pitch = -0.06, grounded = false, swimming = false;
+    let fallStartY = null, wasAirborne = false;
+    let boxGeo = null;
+    const Mats = {};
+
+    function bKey(x, y, z) { return `${Math.round(x)},${Math.round(y)},${Math.round(z)}`; }
+
+    function makeCrystalTex(baseHex, facetHex, trimHex) {
+      const c = document.createElement('canvas');
+      c.width = 64; c.height = 64;
+      const ctx = c.getContext('2d');
+      ctx.fillStyle = baseHex; ctx.fillRect(0, 0, 64, 64);
+      ctx.fillStyle = facetHex;
+      ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(64, 0); ctx.lineTo(0, 64); ctx.closePath(); ctx.fill();
+      ctx.strokeStyle = trimHex; ctx.lineWidth = 3; ctx.strokeRect(2, 2, 60, 60);
+      const tex = new THREE.CanvasTexture(c);
+      tex.magFilter = THREE.NearestFilter; tex.minFilter = THREE.NearestFilter;
+      return tex;
+    }
+
+    function initMaterials() {
+      Mats.grass          = new THREE.MeshStandardMaterial({ map: makeCrystalTex('#15803d', '#16a34a', '#4ade80'), roughness: 0.72 });
+      Mats.dirt           = new THREE.MeshStandardMaterial({ map: makeCrystalTex('#6b442a', '#7c5338', '#9a6b4c'), roughness: 0.85 });
+      Mats.stone          = new THREE.MeshStandardMaterial({ map: makeCrystalTex('#475569', '#64748b', '#94a3b8'), roughness: 0.8 });
+      Mats.wood           = new THREE.MeshStandardMaterial({ map: makeCrystalTex('#78350f', '#92400e', '#d97706'), roughness: 0.78 });
+      Mats.leaves         = new THREE.MeshStandardMaterial({ map: makeCrystalTex('#0d9488', '#14b8a6', '#5eead4'), roughness: 0.75 });
+      Mats.asphalt        = new THREE.MeshStandardMaterial({ map: makeCrystalTex('#1e293b', '#0f172a', '#475569'), roughness: 0.88 });
+      Mats.tiles          = new THREE.MeshStandardMaterial({ map: makeCrystalTex('#e2e8f0', '#cbd5e1', '#94a3b8'), roughness: 0.45 });
+      Mats.sidewalk       = new THREE.MeshStandardMaterial({ map: makeCrystalTex('#94a3b8', '#cbd5e1', '#64748b'), roughness: 0.75 });
+      Mats.bed            = new THREE.MeshStandardMaterial({ map: makeCrystalTex('#dc2626', '#ef4444', '#f8fafc'), roughness: 0.65 });
+      Mats.table          = new THREE.MeshStandardMaterial({ map: makeCrystalTex('#92400e', '#b45309', '#fde68a'), roughness: 0.6 });
+      Mats.chair          = new THREE.MeshStandardMaterial({ map: makeCrystalTex('#b45309', '#d97706', '#fef3c7'), roughness: 0.65 });
+      Mats.hospital_wall  = new THREE.MeshStandardMaterial({ map: makeCrystalTex('#f8fafc', '#e2e8f0', '#cbd5e1'), roughness: 0.4 });
+      Mats.hospital_green = new THREE.MeshStandardMaterial({ map: makeCrystalTex('#65a30d', '#84cc16', '#ecfccb'), roughness: 0.5 });
+      Mats.vento_wall     = new THREE.MeshStandardMaterial({ map: makeCrystalTex('#78350f', '#92400e', '#f59e0b'), roughness: 0.55 });
+      Mats.vento_dark     = new THREE.MeshStandardMaterial({ map: makeCrystalTex('#1c1917', '#292524', '#d97706'), roughness: 0.45 });
+      Mats.coal           = new THREE.MeshStandardMaterial({ map: makeCrystalTex('#334155', '#1e293b', '#0f172a'), roughness: 0.85 });
+      Mats.iron           = new THREE.MeshStandardMaterial({ map: makeCrystalTex('#94a3b8', '#cbd5e1', '#f8fafc'), metalness: 0.35, roughness: 0.45 });
+      Mats.gold           = new THREE.MeshStandardMaterial({ map: makeCrystalTex('#ca8a04', '#eab308', '#fef08a'), metalness: 0.55, roughness: 0.32 });
+      Mats.diamond        = new THREE.MeshStandardMaterial({ map: makeCrystalTex('#0284c7', '#06b6d4', '#a5f3fc'), metalness: 0.45, roughness: 0.25 });
+      Mats.furnace        = new THREE.MeshStandardMaterial({ map: makeCrystalTex('#334155', '#475569', '#fb923c'), roughness: 0.65 });
+      Mats.tnt            = new THREE.MeshStandardMaterial({ map: makeCrystalTex('#dc2626', '#ef4444', '#fef08a'), roughness: 0.6 });
+      Mats.water          = new THREE.MeshStandardMaterial({ color: 0x0ea5e9, transparent: true, opacity: 0.68, roughness: 0.15 });
+    }
+
+    function createNameTag(text, bgHex = 'rgba(15,23,42,0.85)', textHex = '#ffffff') {
+      const c = document.createElement('canvas');
+      c.width = 256; c.height = 56;
+      const ctx = c.getContext('2d');
+      ctx.fillStyle = bgHex;
+      ctx.fillRect(10, 8, 236, 40);
+      ctx.strokeStyle = 'rgba(255,255,255,0.45)';
+      ctx.lineWidth = 3;
+      ctx.strokeRect(10, 8, 236, 40);
+      ctx.fillStyle = textHex;
+      ctx.font = 'bold 24px Inter, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(text, 128, 29);
+      const tex = new THREE.CanvasTexture(c);
+      const spr = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true }));
+      spr.scale.set(2.4, 0.55, 1);
+      return spr;
+    }
+
+    function addBuildingSign(text, bgHex, textHex, x, y, z) {
+      if (!scene) return;
+      const sign = createNameTag(text, bgHex, textHex);
+      sign.scale.set(3.8, 0.85, 1);
+      sign.position.set(x, y, z);
+      scene.add(sign);
+    }
+
+    function isLakeCoord(x, z) {
+      const dx = (x - 16) / 7.5;
+      const dz = (z - 12) / 6.5;
+      return (dx * dx + dz * dz) < 1.0;
+    }
+
+    function isCaveEntrance(x, z) {
+      const dx = (x + 18) / 5.5;
+      const dz = (z + 16) / 5.5;
+      return (dx * dx + dz * dz) < 1.0;
+    }
+
+    function terrainY(x, z) {
+      if (isLakeCoord(x, z)) return 0;
+      if (Math.abs(x) <= 22 && Math.abs(z - 6) <= 9) return 2;
+      const hill = Math.sin(x * 0.085) * Math.cos(z * 0.085) * 2.8 + Math.sin((x + z) * 0.05) * 1.4;
+      const caveDip = isCaveEntrance(x, z) ? -3.2 : 0;
+      return Math.max(1, Math.round(2.2 + hill + caveDip));
+    }
+
+    const BLOCK_MAX_HITS = {
+      leaves: 1, dirt: 2, grass: 2, asphalt: 2, tiles: 2, sidewalk: 2,
+      bed: 2, table: 2, chair: 2, wood: 3, coal: 3, stone: 3, furnace: 3,
+      iron: 4, gold: 4, diamond: 5, hospital_wall: 4, hospital_green: 4, vento_wall: 4, vento_dark: 4
+    };
+
+    function setBlock(x, y, z, type, fromNet = false) {
+      if (!scene || !boxGeo) return;
+      const rx = Math.round(x), ry = Math.round(y), rz = Math.round(z);
+      const k = bKey(rx, ry, rz);
+      if (blocks.has(k)) delBlock(rx, ry, rz, true);
+      const m = new THREE.Mesh(boxGeo, Mats[type] || Mats.stone);
+      m.position.set(rx, ry, rz);
+      const maxHits = BLOCK_MAX_HITS[type] || 3;
+      m.userData = { gx: rx, gy: ry, gz: rz, type, hitsLeft: maxHits, maxHits };
+      scene.add(m);
+      blocks.set(k, { mesh: m, type });
+      worldEdits.set(k, type);
+      if (!fromNet && State.mode === 'group') {
+        broadcastNet({ type: 'block', x: rx, y: ry, z: rz, block: type });
+      }
+    }
+
+    function delBlock(x, y, z, fromNet = false) {
+      if (!scene) return null;
+      const rx = Math.round(x), ry = Math.round(y), rz = Math.round(z);
+      const k = bKey(rx, ry, rz);
+      const item = blocks.get(k);
+      if (!item) return null;
+      scene.remove(item.mesh);
+      blocks.delete(k);
+      worldEdits.set(k, null);
+      if (!fromNet && State.mode === 'group') {
+        broadcastNet({ type: 'block', x: rx, y: ry, z: rz, block: null });
+      }
+      return item.type;
+    }
+
+    function clearWorld() {
+      if (!scene) return;
+      for (const [, v] of blocks) scene.remove(v.mesh);
+      blocks.clear();
+      for (const c of chests) scene.remove(c.mesh);
+      chests.length = 0;
+    }
+
+    function clearVehicles() {
+      if (!scene) return;
+      for (const v of parkedVehicles) scene.remove(v.mesh);
+      parkedVehicles.length = 0;
+    }
+
+    function clearLakeFishes() {
+      if (!scene) return;
+      for (const f of lakeFishes) scene.remove(f.mesh);
+      lakeFishes.length = 0;
+    }
+
+    function spawnGroundCoins() {
+      if (!scene) return;
+      for (const c of coinPickups) scene.remove(c.mesh);
+      coinPickups.length = 0;
+      const coinGeo = new THREE.CylinderGeometry(0.32, 0.32, 0.1, 14);
+      const coinMat = new THREE.MeshStandardMaterial({ color: 0xfacc15, emissive: 0xca8a04, emissiveIntensity: 0.45, metalness: 0.7, roughness: 0.2 });
+      const spots = [[-3, 9], [2, 9], [8, 8], [-8, 8], [-12, 12], [6, 13], [-5, 15], [10, 5], [-10, 5], [0, 14]];
+      spots.forEach(([cx, cz]) => {
+        const m = new THREE.Mesh(coinGeo, coinMat);
+        m.rotation.x = Math.PI / 2;
+        m.position.set(cx, terrainY(cx, cz) + 0.85, cz);
+        scene.add(m);
+        coinPickups.push({ mesh: m, x: cx, z: cz, value: 10 });
+      });
+    }
+
+    function stepCoinPickups() {
+      if (!playerPos) return;
+      for (let i = coinPickups.length - 1; i >= 0; i--) {
+        const c = coinPickups[i];
+        c.mesh.rotation.z += 0.05;
+        if (Math.hypot(playerPos.x - c.x, playerPos.z - c.z) < 1.55) {
+          State.coins += c.value;
+          SFX.pop(660, 980, 0.12);
+          scene.remove(c.mesh);
+          coinPickups.splice(i, 1);
+          updateHud();
         }
       }
     }
 
-    netTick += dt;
-    if (netTick > 0.08 && connections.length > 0) {
-      netTick = 0;
-      const msg = { type: 'pos', x: player.pos.x, y: player.pos.y - 1.7, z: player.pos.z, ry: player.yaw };
-      connections.forEach(c => { if (c.open) c.send(msg); });
+    function spawnVehicle3D(id, x, z, colorHex, labelText) {
+      if (!scene) return;
+      const y = terrainY(x, z) + (id === 'boat' ? 0.72 : 0.55);
+      const grp = new THREE.Group();
+      const bodyMat = new THREE.MeshStandardMaterial({ color: colorHex, metalness: id === 'boat' ? 0.1 : 0.45, roughness: id === 'boat' ? 0.78 : 0.32 });
+      const glassMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.15 });
+      const wheelMat = new THREE.MeshStandardMaterial({ color: 0x090d16, roughness: 0.85 });
+
+      if (id === 'boat') {
+        const hull = new THREE.Mesh(new THREE.BoxGeometry(1.45, 0.42, 2.55), bodyMat);
+        hull.position.y = 0.24;
+        const seat = new THREE.Mesh(new THREE.BoxGeometry(1.25, 0.12, 0.42), new THREE.MeshStandardMaterial({ color: 0xd97706 }));
+        seat.position.set(0, 0.45, 0);
+        const oarL = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.08, 1.4), new THREE.MeshStandardMaterial({ color: 0xfde68a }));
+        oarL.position.set(-0.85, 0.42, 0); oarL.rotation.y = 0.45;
+        const oarR = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.08, 1.4), new THREE.MeshStandardMaterial({ color: 0xfde68a }));
+        oarR.position.set(0.85, 0.42, 0); oarR.rotation.y = -0.45;
+        grp.add(hull, seat, oarL, oarR);
+      } else if (id === 'moto' || id === 'bike') {
+        const frame = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.48, 1.55), bodyMat);
+        frame.position.y = 0.48;
+        const w1 = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.32, 0.18, 12), wheelMat);
+        w1.rotation.z = Math.PI / 2; w1.position.set(0, 0.32, 0.55);
+        const w2 = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.32, 0.18, 12), wheelMat);
+        w2.rotation.z = Math.PI / 2; w2.position.set(0, 0.32, -0.55);
+        grp.add(frame, w1, w2);
+      } else {
+        const chassis = new THREE.Mesh(new THREE.BoxGeometry(1.55, 0.56, 2.75), bodyMat);
+        chassis.position.y = 0.52;
+        const cabin = new THREE.Mesh(new THREE.BoxGeometry(1.36, 0.52, 1.45), glassMat);
+        cabin.position.set(0, 1.02, -0.1);
+        grp.add(chassis, cabin);
+        if (id === 'police_car') {
+          const lightRed = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.14, 0.2), new THREE.MeshStandardMaterial({ color: 0xef4444, emissive: 0xef4444, emissiveIntensity: 0.8 }));
+          lightRed.position.set(-0.28, 1.34, -0.1);
+          const lightBlue = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.14, 0.2), new THREE.MeshStandardMaterial({ color: 0x3b82f6, emissive: 0x3b82f6, emissiveIntensity: 0.8 }));
+          lightBlue.position.set(0.28, 1.34, -0.1);
+          grp.add(lightRed, lightBlue);
+        }
+        [[-0.75, 0.85], [0.75, 0.85], [-0.75, -0.85], [0.75, -0.85]].forEach(([wx, wz]) => {
+          const w = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.32, 0.22, 12), wheelMat);
+          w.rotation.z = Math.PI / 2;
+          w.position.set(wx, 0.32, wz);
+          grp.add(w);
+        });
+      }
+      if (labelText) {
+        const tag = createNameTag(labelText, 'rgba(15,23,42,0.85)', '#fbbf24');
+        tag.position.y = 1.85;
+        grp.add(tag);
+      }
+      grp.position.set(x, y, z);
+      scene.add(grp);
+      parkedVehicles.push({ id, mesh: grp, x, z });
     }
-  }
 
-  if (renderer && scene && camera) renderer.render(scene, camera);
-}
+    function spawnLakeFishesAndBoat() {
+      clearLakeFishes();
+      if (!scene) return;
+      spawnVehicle3D('boat', 11, 12, 0x92400e, '');
 
-initThree();
-animate();
-</script>
+      const fishColors = [0x38bdf8, 0xf97316, 0xfacc15, 0x34d399, 0xf43f5e, 0xa855f7];
+      for (let i = 0; i < 8; i++) {
+        const fGrp = new THREE.Group();
+        const col = fishColors[i % fishColors.length];
+        const fMat = new THREE.MeshStandardMaterial({ color: col, roughness: 0.35 });
+        const fBody = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.22, 0.56), fMat);
+        const fTail = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.26, 0.22), fMat);
+        fTail.position.set(0, 0, -0.36);
+        fGrp.add(fBody, fTail);
+        const ang = (i / 8) * Math.PI * 2;
+        const rad = 1.6 + (i % 3) * 1.3;
+        const fx = 16 + Math.cos(ang) * rad;
+        const fz = 12 + Math.sin(ang) * rad;
+        fGrp.position.set(fx, 0.65, fz);
+        scene.add(fGrp);
+        lakeFishes.push({ mesh: fGrp, tail: fTail, angle: ang, radius: rad, speed: 0.65 + (i % 3) * 0.22 });
+      }
+    }
+
+    function buildWorld() {
+      if (!scene || !boxGeo) return;
+      clearWorld();
+      clearVehicles();
+      spawnGroundCoins();
+      spawnLakeFishesAndBoat();
+      const HALF = 34;
+
+      for (let x = -HALF; x <= HALF; x++) {
+        for (let z = -HALF; z <= HALF; z++) {
+          const topY = terrainY(x, z);
+
+          if (isLakeCoord(x, z)) {
+            setBlock(x, -1, z, 'stone', true);
+            setBlock(x, 0, z, 'water', true);
+            setBlock(x, 1, z, 'water', true);
+            continue;
+          }
+
+          if (Math.abs(x) <= 22 && z >= 9 && z <= 11) {
+            setBlock(x, topY, z, 'asphalt', true);
+            setBlock(x, topY - 1, z, 'dirt', true);
+            continue;
+          }
+          if (Math.abs(x) <= 22 && (z === 8 || z === 12)) {
+            setBlock(x, topY, z, 'sidewalk', true);
+            setBlock(x, topY - 1, z, 'dirt', true);
+            continue;
+          }
+
+          const topType = isCaveEntrance(x, z) ? 'stone' : 'grass';
+          setBlock(x, topY, z, topType, true);
+          setBlock(x, topY - 1, z, 'dirt', true);
+          setBlock(x, topY - 2, z, 'dirt', true);
+
+          const caveFloorY = -4;
+          setBlock(x, caveFloorY, z, 'stone', true);
+          for (let y = caveFloorY + 1; y <= topY - 3; y++) {
+            const h = Math.abs(Math.sin(x * 12.9898 + y * 78.233 + z * 37.719) * 43758.5453) % 1;
+            if (isCaveEntrance(x, z) && y >= -2) continue;
+            if (y <= -1 && h > 0.90) setBlock(x, y, z, 'diamond', true);
+            else if (y <= 0 && h > 0.80) setBlock(x, y, z, 'gold', true);
+            else if (h > 0.65) setBlock(x, y, z, 'iron', true);
+            else if (h > 0.50) setBlock(x, y, z, 'coal', true);
+            else setBlock(x, y, z, 'stone', true);
+          }
+        }
+      }
+
+      const hospX = 14, hospZ = 4, hospY = terrainY(hospX, hospZ);
+      for (let x = hospX - 4; x <= hospX + 4; x++) {
+        for (let z = hospZ - 3; z <= hospZ + 3; z++) {
+          setBlock(x, hospY, z, 'tiles', true);
+          const isEdge = (x === hospX - 4 || x === hospX + 4 || z === hospZ - 3 || z === hospZ + 3);
+          const isDoor = (z === hospZ + 3 && Math.abs(x - hospX) <= 1);
+          if (isEdge && !isDoor) {
+            setBlock(x, hospY + 1, z, x === hospX - 4 ? 'hospital_green' : 'hospital_wall', true);
+            setBlock(x, hospY + 2, z, x === hospX - 4 ? 'hospital_green' : 'hospital_wall', true);
+            setBlock(x, hospY + 3, z, 'hospital_wall', true);
+          }
+          setBlock(x, hospY + 4, z, 'hospital_wall', true);
+        }
+      }
+      setBlock(hospX - 2, hospY + 1, hospZ - 2, 'bed', true);
+      setBlock(hospX + 2, hospY + 1, hospZ - 2, 'bed', true);
+      setBlock(hospX - 2, hospY + 1, hospZ + 1, 'bed', true);
+      setBlock(hospX + 2, hospY + 1, hospZ + 1, 'bed', true);
+      addBuildingSign('🏥 SPITALI', '#dc2626', '#ffffff', hospX, hospY + 3.8, hospZ + 3.6);
+
+      const restX = -14, restZ = 4, restY = terrainY(restX, restZ);
+      for (let x = restX - 5; x <= restX + 5; x++) {
+        for (let z = restZ - 4; z <= restZ + 3; z++) {
+          setBlock(x, restY, z, 'tiles', true);
+          const isEdge = (x === restX - 5 || x === restX + 5 || z === restZ - 4 || z === restZ + 3);
+          const isDoor = (z === restZ + 3 && Math.abs(x - restX) <= 1);
+          if (isEdge && !isDoor) {
+            setBlock(x, restY + 1, z, 'vento_wall', true);
+            setBlock(x, restY + 2, z, 'vento_wall', true);
+            setBlock(x, restY + 3, z, 'vento_dark', true);
+          }
+          setBlock(x, restY + 4, z, 'vento_dark', true);
+        }
+      }
+      setBlock(restX - 3, restY + 1, restZ - 2, 'table', true);
+      setBlock(restX - 4, restY + 1, restZ - 2, 'chair', true);
+      setBlock(restX - 2, restY + 1, restZ - 2, 'chair', true);
+      setBlock(restX + 3, restY + 1, restZ - 2, 'table', true);
+      setBlock(restX + 4, restY + 1, restZ - 2, 'chair', true);
+      setBlock(restX + 2, restY + 1, restZ - 2, 'chair', true);
+      setBlock(restX - 3, restY + 1, restZ + 1, 'table', true);
+      setBlock(restX - 4, restY + 1, restZ + 1, 'chair', true);
+      setBlock(restX + 3, restY + 1, restZ + 1, 'table', true);
+      setBlock(restX + 4, restY + 1, restZ + 1, 'chair', true);
+      setBlock(restX - 1, restY + 1, restZ - 3, 'furnace', true);
+      setBlock(restX,     restY + 1, restZ - 3, 'table', true);
+      setBlock(restX + 1, restY + 1, restZ - 3, 'furnace', true);
+      addBuildingSign('🍕 RESTORANT', '#1c1917', '#fbbf24', restX, restY + 3.8, restZ + 3.6);
+
+      const shopX = 0, shopZ = 3, shopY = terrainY(shopX, shopZ);
+      for (let x = shopX - 4; x <= shopX + 4; x++) {
+        for (let z = shopZ - 3; z <= shopZ + 3; z++) {
+          setBlock(x, shopY, z, 'tiles', true);
+          const isEdge = (x === shopX - 4 || x === shopX + 4 || z === shopZ - 3 || z === shopZ + 3);
+          const isDoor = (z === shopZ + 3 && Math.abs(x - shopX) <= 1);
+          if (isEdge && !isDoor) {
+            setBlock(x, shopY + 1, z, 'gold', true);
+            setBlock(x, shopY + 2, z, 'wood', true);
+            setBlock(x, shopY + 3, z, 'wood', true);
+          }
+          setBlock(x, shopY + 4, z, 'gold', true);
+        }
+      }
+      setBlock(shopX - 2, shopY + 1, shopZ - 2, 'table', true);
+      setBlock(shopX,     shopY + 1, shopZ - 2, 'table', true);
+      setBlock(shopX + 2, shopY + 1, shopZ - 2, 'table', true);
+      addBuildingSign('🏪 DYQANI', '#065f46', '#fde047', shopX, shopY + 3.8, shopZ + 3.6);
+
+      const treeSpots = [[-6, -4], [6, -4], [-11, 15], [5, 16], [13, -11], [-21, -7]];
+      treeSpots.forEach(([tx, tz]) => {
+        const by = terrainY(tx, tz);
+        for (let h = 1; h <= 6; h++) setBlock(tx, by + h, tz, 'wood', true);
+        for (let lx = -2; lx <= 2; lx++) {
+          for (let lz = -2; lz <= 2; lz++) {
+            if (Math.abs(lx) + Math.abs(lz) <= 3) setBlock(tx + lx, by + 5, tz + lz, 'leaves', true);
+            if (Math.abs(lx) <= 1 && Math.abs(lz) <= 1) setBlock(tx + lx, by + 6, tz + lz, 'leaves', true);
+          }
+        }
+        setBlock(tx, by + 7, tz, 'leaves', true);
+      });
+
+      spawnVehicle3D('police_car', 6, 10, 0x1d4ed8, '🚓 Policia');
+      spawnVehicle3D('car', -4, 10, 0xef4444, '');
+      spawnVehicle3D('sport_car', 11, 10, 0xfacc15, '');
+      spawnVehicle3D('moto', -9, 10, 0xf97316, '');
+
+      const crateDefs = [
+        { x: 3,   z: 14,  kind: 'yellow', color: 0xfacc15 },
+        { x: -4,  z: 14,  kind: 'armory', color: 0x38bdf8 },
+        { x: 8,   z: -3,  kind: 'supply', color: 0xf97316 },
+        { x: -18, z: -16, kind: 'relic',  color: 0xc084fc }
+      ];
+
+      crateDefs.forEach(c => {
+        const y = terrainY(c.x, c.z) + 0.92;
+        const grp = new THREE.Group();
+        const box = new THREE.Mesh(
+          new THREE.BoxGeometry(0.86, 0.86, 0.86),
+          new THREE.MeshStandardMaterial({ color: c.color, roughness: 0.35, metalness: 0.25 })
+        );
+        const trim = new THREE.Mesh(
+          new THREE.BoxGeometry(0.9, 0.14, 0.9),
+          new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.5 })
+        );
+        grp.add(box, trim);
+        grp.position.set(c.x, y, c.z);
+        scene.add(grp);
+        chests.push({ mesh: grp, hitMeshes: [box, trim], kind: c.kind, origin: new THREE.Vector3(c.x, y, c.z), active: true, respawnAt: 0 });
+      });
+
+      for (const [k, bType] of worldEdits.entries()) {
+        const [ex, ey, ez] = k.split(',').map(Number);
+        if (bType === null) delBlock(ex, ey, ez, true);
+        else setBlock(ex, ey, ez, bType, true);
+      }
+    }
+
+    function resetSavedWorld() {
+      try { localStorage.removeItem(SAVE_KEY); } catch (e) {}
+      worldEdits.clear();
+      State.level = 1; State.waveKills = 0; State.waveGoal = 5; State.hp = 20; State.kills = 0; State.coins = 0;
+      State.combatUnlocked = false;
+      State.swordPower = 100; State.gaUntil = 0; State.ridingVehicle = null;
+      State.bag = { dirt: 4, stone: 2, wood: 3, coal: 0, iron: 0, gold: 0, diamond: 0, raw_meat: 0, apple: 0, fruit: 0, fish: 0 };
+      State.hotbar = [
+        { id: 'fishing_rod', count: 1 }, { id: null, count: 0 }, { id: null, count: 0 },
+        { id: 'dirt', count: 4 }, { id: 'wood', count: 3 }, { id: 'stone', count: 2 },
+        { id: null, count: 0 }, { id: null, count: 0 }, { id: null, count: 0 }
+      ];
+      document.getElementById('save-banner').classList.add('hidden');
+      if (State.sceneReady) { buildWorld(); spawnMobsAndPlayers(); }
+      renderHotbar(); updateHud();
+    }
+
+    function createHpBar() {
+      const canvas = document.createElement('canvas');
+      canvas.width = 128; canvas.height = 20;
+      const ctx = canvas.getContext('2d');
+      const tex = new THREE.CanvasTexture(canvas);
+      const spr = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true }));
+      spr.scale.set(1.15, 0.18, 1);
+      spr.position.set(0, 2.08, 0);
+
+      function draw(hp, maxHp) {
+        const ratio = Math.max(0, Math.min(1, hp / Math.max(1, maxHp)));
+        ctx.clearRect(0, 0, 128, 20);
+        ctx.fillStyle = 'rgba(15,23,42,0.82)';
+        ctx.fillRect(0, 0, 128, 20);
+        ctx.fillStyle = ratio > 0.45 ? '#22c55e' : ratio > 0.2 ? '#facc15' : '#ef4444';
+        ctx.fillRect(4, 4, Math.round(120 * ratio), 12);
+        tex.needsUpdate = true;
+      }
+      draw(1, 1);
+      return { sprite: spr, draw };
+    }
+
+    function makeAnimal(cfg) {
+      const root = new THREE.Group();
+      const bodyMat = new THREE.MeshStandardMaterial({ color: cfg.body, roughness: 0.72 });
+      const headMat = new THREE.MeshStandardMaterial({ color: cfg.head || cfg.body, roughness: 0.68 });
+      const darkMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.5 });
+
+      const body = new THREE.Mesh(new THREE.BoxGeometry(0.62, 0.54, 1.12), bodyMat);
+      body.position.set(0, 0.68, 0);
+      root.add(body);
+
+      if (cfg.kind === 'tiger' || cfg.kind === 'leopard') {
+        for (let s = -0.35; s <= 0.35; s += 0.23) {
+          const stripe = new THREE.Mesh(new THREE.BoxGeometry(0.66, 0.34, 0.08), darkMat);
+          stripe.position.set(0, 0.72, s);
+          root.add(stripe);
+        }
+      }
+
+      const headGroup = new THREE.Group();
+      headGroup.position.set(0, 0.92, 0.66);
+      const head = new THREE.Mesh(new THREE.BoxGeometry(0.48, 0.44, 0.48), headMat);
+      const snout = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.2, 0.2), new THREE.MeshStandardMaterial({ color: 0xfde68a, roughness: 0.6 }));
+      snout.position.set(0, -0.06, 0.26);
+      const eyeL = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.08, 0.06), darkMat);
+      eyeL.position.set(-0.14, 0.06, 0.24);
+      const eyeR = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.08, 0.06), darkMat);
+      eyeR.position.set(0.14, 0.06, 0.24);
+      headGroup.add(head, snout, eyeL, eyeR);
+
+      if (cfg.kind === 'lion') {
+        const mane = new THREE.Mesh(new THREE.BoxGeometry(0.68, 0.66, 0.32), new THREE.MeshStandardMaterial({ color: 0x78350f, roughness: 0.85 }));
+        mane.position.set(0, 0.02, -0.05);
+        headGroup.add(mane);
+      }
+
+      const earL = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.14, 0.08), headMat);
+      earL.position.set(-0.18, 0.25, 0);
+      const earR = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.14, 0.08), headMat);
+      earR.position.set(0.18, 0.25, 0);
+      headGroup.add(earL, earR);
+      root.add(headGroup);
+
+      const tail = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.1, 0.52), headMat);
+      tail.position.set(0, 0.78, -0.72);
+      tail.rotation.x = 0.45;
+      root.add(tail);
+
+      const legGeo = new THREE.BoxGeometry(0.18, 0.44, 0.18);
+      const lLeg = new THREE.Mesh(legGeo, bodyMat); lLeg.position.set(-0.2, 0.22, 0.36);
+      const rLeg = new THREE.Mesh(legGeo, bodyMat); rLeg.position.set(0.2, 0.22, 0.36);
+      const bLLeg = new THREE.Mesh(legGeo, bodyMat); bLLeg.position.set(-0.2, 0.22, -0.36);
+      const bRLeg = new THREE.Mesh(legGeo, bodyMat); bRLeg.position.set(0.2, 0.22, -0.36);
+      root.add(lLeg, rLeg, bLLeg, bRLeg);
+
+      const hpBar = createHpBar();
+      hpBar.sprite.position.set(0, 1.55, 0);
+      root.add(hpBar.sprite);
+
+      root.userData.rig = { headGroup, lLeg, rLeg, bLLeg, bRLeg, hpBar, armorMat: bodyMat };
+      return root;
+    }
+
+    function makeDoll(cfg) {
+      const root = new THREE.Group();
+      const skinMat = new THREE.MeshStandardMaterial({ color: cfg.skin, roughness: 0.65 });
+      const armorMat = new THREE.MeshStandardMaterial({ color: cfg.armor, roughness: 0.45, metalness: 0.25 });
+      const accentMat = new THREE.MeshStandardMaterial({ color: cfg.accent, roughness: 0.4 });
+      const pantsMat = new THREE.MeshStandardMaterial({ color: cfg.pants, roughness: 0.75 });
+      const visorMat = new THREE.MeshStandardMaterial({ color: cfg.visor, emissive: cfg.visor, emissiveIntensity: 0.35 });
+
+      const torso = new THREE.Mesh(new THREE.BoxGeometry(0.68, 0.78, 0.36), armorMat);
+      torso.position.y = 1.02;
+      root.add(torso);
+
+      const headGroup = new THREE.Group();
+      headGroup.position.y = 1.66;
+      const head = new THREE.Mesh(new THREE.BoxGeometry(0.56, 0.56, 0.56), skinMat);
+      const visor = new THREE.Mesh(new THREE.BoxGeometry(0.58, 0.16, 0.1), visorMat);
+      visor.position.set(0, 0.04, 0.26);
+      headGroup.add(head, visor);
+      root.add(headGroup);
+
+      if (!cfg.zombie && !cfg.monkey) {
+        const cape = new THREE.Mesh(new THREE.BoxGeometry(0.62, 0.76, 0.07), accentMat);
+        cape.position.set(0, 1.02, -0.21);
+        cape.rotation.x = 0.14;
+        root.add(cape);
+      }
+
+      const lArm = new THREE.Group();
+      lArm.position.set(-0.48, 1.32, 0);
+      const lArmMesh = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.72, 0.24), cfg.zombie ? skinMat : armorMat);
+      lArmMesh.position.y = -0.3;
+      lArm.add(lArmMesh);
+
+      const rArm = new THREE.Group();
+      rArm.position.set(0.48, 1.32, 0);
+      const rArmMesh = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.72, 0.24), cfg.zombie ? skinMat : armorMat);
+      rArmMesh.position.y = -0.3;
+      rArm.add(rArmMesh);
+
+      if (cfg.zombie) {
+        lArm.rotation.x = -Math.PI / 2.2;
+        rArm.rotation.x = -Math.PI / 2.2;
+      } else if (!cfg.monkey) {
+        const blade = new THREE.Mesh(
+          new THREE.BoxGeometry(0.11, 0.06, 0.76),
+          new THREE.MeshStandardMaterial({ color: 0xe2e8f0, metalness: 0.6, roughness: 0.25 })
+        );
+        blade.position.set(0, -0.56, 0.64);
+        rArm.add(blade);
+      }
+
+      root.add(lArm, rArm);
+
+      const lLeg = new THREE.Group();
+      lLeg.position.set(-0.18, 0.64, 0);
+      const lLegMesh = new THREE.Mesh(new THREE.BoxGeometry(0.26, 0.64, 0.28), pantsMat);
+      lLegMesh.position.y = -0.32;
+      lLeg.add(lLegMesh);
+
+      const rLeg = new THREE.Group();
+      rLeg.position.set(0.18, 0.64, 0);
+      const rLegMesh = new THREE.Mesh(new THREE.BoxGeometry(0.26, 0.64, 0.28), pantsMat);
+      rLegMesh.position.y = -0.32;
+      rLeg.add(rLegMesh);
+
+      root.add(lLeg, rLeg);
+
+      const hpBar = createHpBar();
+      root.add(hpBar.sprite);
+
+      if (cfg.label) {
+        const tag = createNameTag(cfg.label, 'rgba(15,23,42,0.82)', '#38bdf8');
+        tag.position.set(0, 2.45, 0);
+        root.add(tag);
+      }
+
+      root.userData.rig = { headGroup, lArm, rArm, lLeg, rLeg, hpBar, armorMat };
+      return root;
+    }
+
+    function spawnMobsAndPlayers() {
+      if (!scene) return;
+      for (const m of mobs) scene.remove(m.mesh);
+      mobs.length = 0;
+
+      const lvScale = 1 + (State.level - 1) * 0.14;
+      const arenaMonsters = [
+        { kind: 'lion',        body: 0xd97706, head: 0xb45309, x: -7,  z: -8,  hp: 16, spd: 2.8, dmg: 1.5 },
+        { kind: 'tiger',       body: 0xf97316, head: 0xea580c, x: 9,   z: -8,  hp: 16, spd: 2.9, dmg: 1.5 },
+        { kind: 'dog',         body: 0x92400e, head: 0x78350f, x: -12, z: -4,  hp: 12, spd: 3.1, dmg: 1.0 },
+        { kind: 'leopard',     body: 0xfacc15, head: 0xca8a04, x: 11,  z: 14,  hp: 15, spd: 3.0, dmg: 1.5 },
+        { kind: 'food_animal', body: 0xf8fafc, head: 0xfdba74, x: -5,  z: 15,  hp: 10, spd: 1.7, dmg: 0 },
+        { kind: 'food_animal', body: 0x78350f, head: 0x92400e, x: 8,   z: 15,  hp: 10, spd: 1.7, dmg: 0 }
+      ];
+
+      arenaMonsters.forEach(p => {
+        const mesh = makeAnimal(p);
+        mesh.position.set(p.x, terrainY(p.x, p.z) + 0.5, p.z);
+        scene.add(mesh);
+        const maxHp = Math.round(p.hp * lvScale);
+        const mob = { mesh, kind: p.kind, dmg: p.dmg, hp: maxHp, maxHp, spd: p.spd, cd: 0, hurtCd: 0, slowUntil: 0, phase: Math.random() * 6, wanderAngle: Math.random() * Math.PI * 2, wanderTimer: 2 };
+        mesh.userData.rig.hpBar.draw(mob.hp, mob.maxHp);
+        mobs.push(mob);
+      });
+
+      [[-15, -11], [15, -4]].forEach(([x, z]) => {
+        const mesh = makeDoll({ skin: 0x65a30d, armor: 0x1e3a8a, accent: 0x4d7c0f, pants: 0x1e293b, visor: 0xef4444, zombie: true });
+        mesh.position.set(x, terrainY(x, z) + 0.5, z);
+        scene.add(mesh);
+        const maxHp = Math.round(16 * lvScale);
+        const mob = { mesh, kind: 'zombie', dmg: 1.5, hp: maxHp, maxHp, spd: 2.1, cd: 0, hurtCd: 0, slowUntil: 0, phase: Math.random() * 6, wanderAngle: Math.random() * Math.PI * 2, wanderTimer: 2 };
+        mesh.userData.rig.hpBar.draw(mob.hp, mob.maxHp);
+        mobs.push(mob);
+      });
+
+      [[-6, -4], [6, -4]].forEach(([tx, tz]) => {
+        const mesh = makeDoll({ skin: 0x92400e, armor: 0x78350f, accent: 0xd97706, pants: 0x451a03, visor: 0xfacc15, monkey: true });
+        mesh.scale.set(0.68, 0.68, 0.68);
+        const treeTopY = terrainY(tx, tz) + 6.5;
+        mesh.position.set(tx, treeTopY, tz);
+        scene.add(mesh);
+        const maxHp = Math.round(12 * lvScale);
+        const mob = { mesh, kind: 'monkey', dmg: 1.0, inTree: true, treeX: tx, treeY: treeTopY, treeZ: tz, hp: maxHp, maxHp, spd: 1.6, cd: 2.5, hurtCd: 0, slowUntil: 0, phase: Math.random() * 6 };
+        mesh.userData.rig.hpBar.draw(mob.hp, mob.maxHp);
+        mobs.push(mob);
+      });
+    }
+
+    function heldSlot() { return State.hotbar[State.slot] || null; }
+
+    function rebuildHandModel() {
+      if (!handItemGroup || typeof THREE === 'undefined') return;
+      while (handItemGroup.children.length > 0) handItemGroup.remove(handItemGroup.children[0]);
+      const s = heldSlot();
+      const def = s && s.id && s.count > 0 ? ITEMS[s.id] : null;
+      if (!def) return;
+
+      if (def.type === 'sword') {
+        const matMetal = new THREE.MeshStandardMaterial({ color: def.hex, metalness: 0.6, roughness: 0.25 });
+        const matGrip = new THREE.MeshStandardMaterial({ color: 0x451a03, roughness: 0.8 });
+        const grip = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.06, 0.16), matGrip);
+        const blade = new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.035, 0.56), matMetal);
+        blade.position.set(0, 0.01, -0.36);
+        handItemGroup.add(grip, blade);
+      } else if (def.type === 'rod') {
+        const rod = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.04, 0.72), new THREE.MeshStandardMaterial({ color: 0x92400e }));
+        rod.position.set(0, 0.04, -0.32);
+        rod.rotation.x = 0.22;
+        const line = new THREE.Mesh(new THREE.BoxGeometry(0.012, 0.36, 0.012), new THREE.MeshStandardMaterial({ color: 0xf8fafc }));
+        line.position.set(0, -0.06, -0.66);
+        handItemGroup.add(rod, line);
+      } else if (def.type === 'bow') {
+        const bowArc = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.56, 0.08), new THREE.MeshStandardMaterial({ color: 0x92400e }));
+        bowArc.position.set(0, 0.02, -0.32);
+        handItemGroup.add(bowArc);
+      } else {
+        const miniBlock = new THREE.Mesh(
+          new THREE.BoxGeometry(0.24, 0.24, 0.24),
+          Mats[def.block] || new THREE.MeshStandardMaterial({ color: def.hex })
+        );
+        miniBlock.position.set(0, 0.03, -0.26);
+        handItemGroup.add(miniBlock);
+      }
+    }
+
+    function swingHand() { handSwing = 1.0; }
+
+    function updateHandAnimation(dt, spdRatio) {
+      if (!handPivot) return;
+      if (handSwing > 0) handSwing = Math.max(0, handSwing - dt * 4.5);
+      const bob = Math.sin(performance.now() * 0.011) * 0.025 * spdRatio;
+      const swingRot = Math.sin(handSwing * Math.PI) * 1.15;
+      handPivot.position.set(0.34, -0.28 + bob, -0.45);
+      handPivot.rotation.set(-swingRot * 0.75, swingRot * 0.45, -swingRot * 0.35);
+    }
+
+    function giveItem(id, amt = 1) {
+      State.bag[id] = (State.bag[id] || 0) + amt;
+      if (ITEMS[id] && (ITEMS[id].type === 'sword' || ITEMS[id].type === 'bow')) {
+        State.combatUnlocked = true;
+      }
+      const existing = State.hotbar.find(x => x && x.id === id);
+      if (existing) {
+        existing.count += amt;
+      } else {
+        const emptyIdx = State.hotbar.findIndex(x => !x || !x.id || x.count <= 0);
+        if (emptyIdx >= 0) State.hotbar[emptyIdx] = { id, count: amt };
+      }
+      renderHotbar();
+      renderCraftUI();
+    }
+
+    function takeItem(id, amt = 1) {
+      if ((State.bag[id] || 0) < amt) return false;
+      State.bag[id] -= amt;
+      const slot = State.hotbar.find(x => x && x.id === id);
+      if (slot) {
+        slot.count -= amt;
+        if (slot.count <= 0) { slot.id = null; slot.count = 0; }
+      }
+      renderHotbar();
+      renderCraftUI();
+      return true;
+    }
+
+    function findTargetMob(dir) {
+      if (!playerPos) return null;
+      let best = null, bestScore = 0.65;
+      for (const m of mobs) {
+        const toMob = m.mesh.position.clone().sub(playerPos);
+        const dist = toMob.length();
+        if (dist > 4.6) continue;
+        toMob.normalize();
+        const dot = dir.dot(toMob);
+        if (dot > bestScore) { bestScore = dot; best = m; }
+      }
+      return best;
+    }
+
+    function flashMobRed(m) {
+      const rig = m.mesh.userData.rig;
+      if (!rig || !rig.armorMat) return;
+      const orig = rig.armorMat.emissive.getHex();
+      rig.armorMat.emissive.setHex(0xff2a55);
+      rig.armorMat.emissiveIntensity = 0.75;
+      setTimeout(() => {
+        if (rig && rig.armorMat) { rig.armorMat.emissive.setHex(orig); rig.armorMat.emissiveIntensity = 0.1; }
+      }, 150);
+    }
+
+    function advanceLevelIfReady() {
+      if (State.waveKills >= State.waveGoal) {
+        State.level += 1;
+        State.waveKills = 0;
+        State.waveGoal = 5 + (State.level - 1) * 2;
+        State.hp = Math.min(maxHpNow(), State.hp + 6);
+        State.swordPower = 100;
+        giveItem('gold_apple', 1);
+        giveItem('diamond', 1);
+        SFX.pop(520, 980, 0.22);
+        spawnMobsAndPlayers();
+        saveProgress();
+        updateHud();
+      }
+    }
+
+    function openCrate(c, now) {
+      c.active = false; c.mesh.visible = false; c.respawnAt = now + 35000;
+      SFX.pop(480, 860, 0.14);
+      if (c.kind === 'yellow') { giveItem('potion', 2); State.swordPower = 100; }
+      else if (c.kind === 'armory') { giveItem('pickaxe', 1); giveItem('axe', 1); }
+      else if (c.kind === 'supply') { giveItem('coal', 2); giveItem('water_bucket', 1); }
+      else { giveItem('gold_apple', 1); giveItem('ender_pearl', 2); }
+      saveProgress(); updateHud();
+    }
+
+    function primaryAction() {
+      if (!State.running || !camera || !playerPos) return;
+      SFX.init();
+      swingHand();
+
+      const charge = Math.max(0.35, 1.0 - State.attackCd);
+      State.attackCd = 0.45;
+      const s = heldSlot();
+      const def = s && s.id && s.count > 0 ? ITEMS[s.id] : null;
+      const dir = new THREE.Vector3(0, 0, -1).applyEuler(new THREE.Euler(pitch, yaw, 0, 'YXZ'));
+
+      const target = findTargetMob(dir);
+      if (target) {
+        const now = performance.now();
+        if (now < (target.hurtCd || 0)) return;
+        target.hurtCd = now + 350;
+        if (target.kind !== 'food_animal') State.combatUnlocked = true;
+
+        const isSword = def && def.type === 'sword';
+        if (isSword && State.swordPower <= 0) target.hp -= 2.0 * charge;
+        else {
+          if (isSword) { State.swordPower = Math.max(0, State.swordPower - 4); updateHud(); }
+          const dmg = isSword ? def.dmg * (0.75 + 0.25 * (State.swordPower / 100)) : 4.2;
+          target.hp -= dmg * charge;
+        }
+
+        SFX.entitySound(target.kind);
+        flashMobRed(target);
+
+        const kb = dir.clone(); kb.y = 0;
+        if (kb.lengthSq() > 0.001) kb.normalize().multiplyScalar(1.1 * charge);
+        target.mesh.position.x = Math.max(-25, Math.min(25, target.mesh.position.x + kb.x));
+        target.mesh.position.z = Math.max(-25, Math.min(25, target.mesh.position.z + kb.z));
+
+        const rig = target.mesh.userData.rig;
+        if (rig && rig.hpBar) rig.hpBar.draw(target.hp, target.maxHp);
+
+        if (target.hp <= 0) {
+          State.kills += 1;
+          State.waveKills += 1;
+          State.coins += 12;
+          SFX.pop(540, 920, 0.16);
+          if (target.kind === 'food_animal') giveItem('raw_meat', 2);
+          else { giveItem('raw_meat', 1); giveItem('gold', 1); }
+
+          target.hp = target.maxHp;
+          if (rig && rig.hpBar) rig.hpBar.draw(target.hp, target.maxHp);
+          if (target.inTree) {
+            target.mesh.position.set(target.treeX, target.treeY, target.treeZ);
+          } else {
+            const ang = Math.random() * Math.PI * 2;
+            const rx = Math.max(-23, Math.min(23, Math.round(Math.cos(ang) * 18)));
+            const rz = Math.max(-23, Math.min(23, Math.round(Math.sin(ang) * 18)));
+            target.mesh.position.set(rx, terrainY(rx, rz) + 0.5, rz);
+          }
+          advanceLevelIfReady(); saveProgress(); updateHud();
+        }
+        return;
+      }
+
+      const ray = new THREE.Raycaster(camera.position, dir, 0, 5.2);
+      for (const c of chests) {
+        if (!c.active) continue;
+        if (ray.intersectObjects(c.hitMeshes, true).length > 0) { openCrate(c, performance.now()); return; }
+      }
+
+      const blockMeshes = Array.from(blocks.values()).map(v => v.mesh);
+      const hits = ray.intersectObjects(blockMeshes, false);
+      if (hits.length > 0) {
+        const hitObj = hits[0].object;
+        const ud = hitObj.userData;
+        if (ud && ud.type !== 'water') {
+          const hitPower = (def && (def.type === 'tool' || def.type === 'axe')) ? 2 : 1;
+          ud.hitsLeft = (ud.hitsLeft || 2) - hitPower;
+          if (ud.hitsLeft > 0) {
+            const sc = 0.86 + 0.14 * (ud.hitsLeft / (ud.maxHits || 3));
+            hitObj.scale.set(sc, sc, sc);
+            SFX.pop(210, 290, 0.06);
+            return;
+          }
+          const removedType = delBlock(ud.gx, ud.gy, ud.gz);
+          SFX.pop(260, 420, 0.08);
+          if (removedType === 'leaves') {
+            giveItem(Math.random() > 0.45 ? 'apple' : 'fruit', 1);
+          } else if (removedType === 'wood') {
+            giveItem('wood', 1);
+          } else if (removedType === 'dirt' || removedType === 'grass') {
+            giveItem('dirt', 1);
+            if (Math.random() < 0.35) {
+              const digFinds = ['coal', 'iron', 'gold', 'apple'];
+              const bonus = digFinds[Math.floor(Math.random() * digFinds.length)];
+              giveItem(bonus, 1);
+              SFX.pop(540, 880, 0.12);
+            }
+          } else if (['stone', 'coal', 'iron', 'gold', 'diamond', 'furnace', 'asphalt', 'tiles', 'sidewalk', 'bed', 'table', 'chair'].includes(removedType)) {
+            giveItem(removedType, 1);
+            if (removedType === 'stone' && Math.random() < 0.42) {
+              const oreFinds = ['coal', 'iron', 'gold', 'diamond'];
+              const bonusOre = oreFinds[Math.floor(Math.random() * oreFinds.length)];
+              giveItem(bonusOre, 1);
+              SFX.pop(620, 960, 0.14);
+            }
+          }
+          saveProgress();
+        }
+      }
+    }
+
+    function collectNearbyPuddle(giveBackBucket = false) {
+      if (!playerPos) return false;
+      for (let i = puddles.length - 1; i >= 0; i--) {
+        const p = puddles[i];
+        if (Math.hypot(playerPos.x - p.x, playerPos.z - p.z) <= 3.6 && Math.abs(playerPos.y - p.y) <= 2.6) {
+          scene.remove(p.mesh);
+          puddles.splice(i, 1);
+          if (giveBackBucket) {
+            giveItem('water_bucket', 1);
+            saveProgress();
+          }
+          SFX.pop(360, 680, 0.14);
+          return true;
+        }
+      }
+      return false;
+    }
+
+    function secondaryAction() {
+      if (!State.running || !camera || !playerPos) return;
+      SFX.init();
+      swingHand();
+
+      if (State.ridingVehicle) {
+        State.ridingVehicle = null;
+        SFX.pop(320, 220, 0.12);
+        updateHud();
+        return;
+      }
+      for (const v of parkedVehicles) {
+        if (Math.hypot(playerPos.x - v.mesh.position.x, playerPos.z - v.mesh.position.z) < 2.8) {
+          State.ridingVehicle = v.id;
+          SFX.pop(420, 740, 0.15);
+          if (v.id === 'police_car') SFX.sirenPulse();
+          else if (v.id !== 'boat') SFX.horn();
+          updateHud();
+          return;
+        }
+      }
+
+      const s = heldSlot();
+      const def = s && s.id && s.count > 0 ? ITEMS[s.id] : null;
+      const dir = new THREE.Vector3(0, 0, -1).applyEuler(new THREE.Euler(pitch, yaw, 0, 'YXZ'));
+
+      if ((!def || def.type !== 'bucket') && collectNearbyPuddle(true)) {
+        updateHud();
+        return;
+      }
+
+      const nearLake = isLakeCoord(Math.round(playerPos.x), Math.round(playerPos.z)) || Math.hypot(playerPos.x - 16, playerPos.z - 12) < 9.5;
+      if ((def && def.type === 'rod') || (nearLake && (!def || def.type !== 'block'))) {
+        if (nearLake) {
+          giveItem('fish', 1);
+          SFX.pop(520, 880, 0.16);
+          updateHud();
+          return;
+        }
+      }
+
+      if (!def) return;
+
+      if (def.type === 'vehicle') {
+        const vx = Math.round(playerPos.x + dir.x * 2.5);
+        const vz = Math.round(playerPos.z + dir.z * 2.5);
+        if (takeItem(s.id, 1)) {
+          spawnVehicle3D(s.id, vx, vz, def.hex, s.id === 'police_car' ? '🚓 Policia' : '');
+          State.ridingVehicle = s.id;
+          SFX.pop(460, 780, 0.15);
+          updateHud();
+        }
+        return;
+      }
+
+      if (def.type === 'potion') {
+        if (takeItem('potion', 1)) { State.swordPower = 100; SFX.pop(420, 940, 0.16); updateHud(); }
+        return;
+      }
+
+      if (def.type === 'food') {
+        if (takeItem(s.id, 1)) {
+          if (State.hp >= maxHpNow() && (State.bonusHearts || 0) < 5) {
+            State.bonusHearts = (State.bonusHearts || 0) + 1;
+          }
+          State.hp = Math.min(maxHpNow(), State.hp + (def.heal || 3));
+          SFX.pop(460, 760, 0.14);
+          updateHud();
+        }
+        return;
+      }
+
+      if (def.type === 'gapple') {
+        if (takeItem('gold_apple', 1)) {
+          State.gaUntil = Date.now() + 180000;
+          State.hp = maxHpNow();
+          SFX.pop(520, 1040, 0.24);
+          updateHud();
+        }
+        return;
+      }
+
+      if (def.type === 'bucket') {
+        if (collectNearbyPuddle(false)) {
+          updateHud();
+          return;
+        }
+        const ray = new THREE.Raycaster(camera.position, dir, 0, 5.2);
+        const hits = ray.intersectObjects(Array.from(blocks.values()).map(v => v.mesh), false);
+        let px, pz, py;
+        if (hits.length > 0 && hits[0].face) {
+          const hitPt = hits[0].point.clone().addScaledVector(hits[0].face.normal, 0.12);
+          px = Math.round(hitPt.x);
+          pz = Math.round(hitPt.z);
+          py = hitPt.y + 0.08;
+        } else {
+          px = Math.round(playerPos.x + dir.x * 2.2);
+          pz = Math.round(playerPos.z + dir.z * 2.2);
+          py = getStandingFloorY(px, pz, playerPos.y) - 1.2;
+        }
+        if (takeItem('water_bucket', 1)) {
+          const disc = new THREE.Mesh(
+            new THREE.CylinderGeometry(2.6, 2.6, 0.16, 16),
+            new THREE.MeshStandardMaterial({ color: 0x0ea5e9, transparent: true, opacity: 0.72 })
+          );
+          disc.position.set(px, py, pz);
+          scene.add(disc);
+          puddles.push({ mesh: disc, x: px, z: pz, y: py, expiresAt: performance.now() + 90000 });
+          SFX.pop(320, 210, 0.18);
+          saveProgress();
+          updateHud();
+        }
+        return;
+      }
+
+      if (def.type === 'pearl') {
+        if (takeItem('ender_pearl', 1)) {
+          const orb = new THREE.Mesh(
+            new THREE.SphereGeometry(0.2, 12, 12),
+            new THREE.MeshStandardMaterial({ color: 0xc084fc, emissive: 0xa855f7, emissiveIntensity: 0.6 })
+          );
+          orb.position.copy(camera.position).addScaledVector(dir, 1.0);
+          scene.add(orb);
+          pearls.push({ mesh: orb, vel: dir.clone().multiplyScalar(22).add(new THREE.Vector3(0, 4.5, 0)), bornAt: performance.now() });
+          SFX.pop(640, 960, 0.12);
+        }
+        return;
+      }
+
+      if (def.type === 'tnt') {
+        if (takeItem('tnt', 1)) {
+          const tx = Math.round(playerPos.x + dir.x * 2.5);
+          const tz = Math.round(playerPos.z + dir.z * 2.5);
+          const ty = terrainY(tx, tz) + 1;
+          setBlock(tx, ty, tz, 'tnt');
+          setTimeout(() => {
+            delBlock(tx, ty, tz);
+            SFX.boom();
+            for (const m of mobs) {
+              if (m.mesh.position.distanceTo(new THREE.Vector3(tx, ty, tz)) < 6.5) {
+                m.hp -= 16;
+                flashMobRed(m);
+                const rig = m.mesh.userData.rig;
+                if (rig && rig.hpBar) rig.hpBar.draw(m.hp, m.maxHp);
+              }
+            }
+          }, 900);
+        }
+        return;
+      }
+
+      if (def.type === 'block') {
+        const ray = new THREE.Raycaster(camera.position, dir, 0, 5.2);
+        const hits = ray.intersectObjects(Array.from(blocks.values()).map(v => v.mesh), false);
+        let bx, by, bz;
+        if (hits.length > 0 && hits[0].face) {
+          const p = hits[0].point.clone().addScaledVector(hits[0].face.normal, 0.52);
+          bx = Math.round(p.x); by = Math.round(p.y); bz = Math.round(p.z);
+        } else {
+          bx = Math.round(playerPos.x + dir.x * 2.4);
+          by = Math.round(terrainY(Math.round(playerPos.x + dir.x * 2.4), Math.round(playerPos.z + dir.z * 2.4)) + 1);
+          bz = Math.round(playerPos.z + dir.z * 2.4);
+        }
+        if (takeItem(s.id, 1)) {
+          setBlock(bx, by, bz, def.block);
+          SFX.pop(360, 520, 0.08);
+          saveProgress();
+        }
+      }
+    }
+
+    function hurtPlayer(dmg, kind = 'player', bypassCombatLock = false) {
+      if (!State.running || (!State.combatUnlocked && !bypassCombatLock)) return;
+      const now = performance.now();
+      if (now - State.lastHurtAt < 750) return;
+      State.lastHurtAt = now;
+      State.lastCombatAt = now;
+
+      State.hp = Math.max(0, State.hp - dmg);
+      SFX.entitySound(kind);
+      updateHud();
+
+      const vig = document.getElementById('hurt-vignette');
+      vig.style.opacity = '1';
+      setTimeout(() => { vig.style.opacity = '0'; }, 160);
+
+      if (State.hp <= 0) {
+        State.running = false;
+        saveProgress();
+        try { if (document.pointerLockElement) document.exitPointerLock(); } catch (e) {}
+        document.getElementById('crosshair').classList.add('hidden');
+        document.getElementById('touch-ui').classList.add('hidden');
+        document.getElementById('go-stats').textContent = L().goStats(State.kills, State.level);
+        document.getElementById('gameover-modal').classList.remove('hidden');
+        document.getElementById('gameover-modal').classList.add('flex');
+      }
+    }
+
+    function respawnPlayer() {
+      document.getElementById('gameover-modal').classList.add('hidden');
+      document.getElementById('gameover-modal').classList.remove('flex');
+      State.hp = maxHpNow();
+      State.swordPower = 100;
+      if (playerPos && playerVel) { playerPos.set(0, terrainY(0, 12) + 1.8, 12); playerVel.set(0, 0, 0); }
+      State.running = true;
+      updateHud();
+      if (!isTouchDevice()) requestLock();
+      else document.getElementById('touch-ui').classList.remove('hidden');
+      document.getElementById('crosshair').classList.remove('hidden');
+    }
+
+    function backToMenuFromGameOver() {
+      document.getElementById('gameover-modal').classList.add('hidden');
+      document.getElementById('gameover-modal').classList.remove('flex');
+      openLobby();
+    }
+
+    function craftRecipe(id) {
+      SFX.init();
+      let ok = false, amt = 1;
+      if (id === 'fishing_rod') ok = takeItem('wood', 2);
+      else if (id === 'boat') ok = takeItem('wood', 3);
+      else if (id === 'pickaxe') ok = takeItem('stone', 2) || takeItem('iron', 2);
+      else if (id === 'axe') ok = takeItem('stone', 2) || takeItem('wood', 2);
+      else if (id === 'bow') ok = takeItem('wood', 2) && takeItem('iron', 1);
+      else if (id === 'stone_sword') { ok = takeItem('stone', 3); if (ok) State.swordPower = 100; }
+      else if (id === 'iron_sword') { ok = takeItem('iron', 2); if (ok) State.swordPower = 100; }
+      else if (id === 'gold_sword') { ok = takeItem('gold', 2); if (ok) State.swordPower = 100; }
+      else if (id === 'diamond_sword') { ok = takeItem('diamond', 2); if (ok) State.swordPower = 100; }
+      else if (id === 'asphalt') { ok = takeItem('stone', 2) && takeItem('coal', 1); amt = 4; }
+      else if (id === 'tiles') { ok = takeItem('stone', 2); amt = 4; }
+      else if (id === 'sidewalk') { ok = takeItem('stone', 2) && takeItem('dirt', 1); amt = 4; }
+      else if (id === 'bed') ok = takeItem('wood', 2) && takeItem('dirt', 1);
+      else if (id === 'table') ok = takeItem('wood', 2);
+      else if (id === 'chair') ok = takeItem('wood', 1);
+      else if (id === 'bike') ok = takeItem('iron', 2);
+      else if (id === 'moto') ok = takeItem('iron', 3) && takeItem('coal', 1);
+      else if (id === 'car') ok = takeItem('iron', 4) && takeItem('gold', 1);
+      else if (id === 'tnt') { ok = takeItem('coal', 2) && (takeItem('dirt', 2) || takeItem('stone', 2)); amt = 2; }
+      else if (id === 'furnace') ok = takeItem('stone', 4);
+      else if (id === 'water_bucket') ok = takeItem('iron', 2);
+      else if (id === 'gold_apple') ok = takeItem('gold', 2);
+
+      if (ok) {
+        giveItem(id, amt);
+        SFX.pop(460, 820, 0.14);
+        saveProgress();
+        updateHud();
+      }
+    }
+
+    function smeltMeat() {
+      SFX.init();
+      if (takeItem('coal', 1) && (takeItem('raw_meat', 1) || takeItem('fish', 1))) {
+        giveItem('cooked_meat', 1);
+        SFX.pop(520, 880, 0.16);
+        saveProgress();
+      }
+    }
+
+    const SHOP_CATALOG = [
+      { id: 'fishing_rod',   price: 10, label: '🎣 Kallam Peshkimi' },
+      { id: 'boat',          price: 18, label: '🚣 Varkë Liqeni' },
+      { id: 'wooden_sword',  price: 15, label: '🗡️ Shpatë Druri' },
+      { id: 'stone_sword',   price: 28, label: '⚔️ Shpatë Guri' },
+      { id: 'iron_sword',    price: 45, label: '🗡️ Shpatë Hekuri' },
+      { id: 'bow',           price: 35, label: '🏹 Hark & Shigjetë' },
+      { id: 'cooked_meat',   price: 10, label: '🍖 Ushqim (+3❤️)' },
+      { id: 'car',           price: 55, label: '🚗 Makinë e Kuqe' },
+      { id: 'police_car',    price: 75, label: '🚓 Makinë Policie (Sirena)' },
+      { id: 'sport_car',     price: 95, label: '🏎️ Makinë Sportive' },
+      { id: 'taxi_car',      price: 50, label: '🚕 Taksi' },
+      { id: 'suv_car',       price: 65, label: '🚙 Xhip SUV' },
+      { id: 'moto',          price: 40, label: '🏍️ Motorr' },
+      { id: 'bike',          price: 22, label: '🚲 Biçikletë' }
+    ];
+
+    function buyShopItem(id, price) {
+      SFX.init();
+      if ((State.coins || 0) < price) return;
+      State.coins -= price;
+      giveItem(id, 1);
+      SFX.pop(540, 920, 0.14);
+      saveProgress();
+      renderCraftUI();
+      updateHud();
+    }
+
+    function sellAllProduce() {
+      SFX.init();
+      let earned = 0;
+      const rates = { apple: 6, fruit: 7, fish: 10, raw_meat: 8, cooked_meat: 14, coal: 6, iron: 12, gold: 22, diamond: 40 };
+      Object.entries(rates).forEach(([k, rate]) => {
+        const cnt = State.bag[k] || 0;
+        if (cnt > 0 && takeItem(k, cnt)) earned += cnt * rate;
+      });
+      if (earned > 0) {
+        State.coins += earned;
+        SFX.pop(620, 980, 0.16);
+        saveProgress();
+        renderCraftUI();
+        updateHud();
+      }
+    }
+
+    function toggleShopModal(open) {
+      toggleCraftModal(open);
+      if (open) switchCraftTab('shop');
+    }
+
+    function toggleCraftModal(open) {
+      const el = document.getElementById('craft-modal');
+      if (open) {
+        try { if (document.pointerLockElement) document.exitPointerLock(); } catch (e) {}
+        renderCraftUI();
+        el.classList.remove('hidden');
+        el.classList.add('flex');
+      } else {
+        el.classList.add('hidden');
+        el.classList.remove('flex');
+        if (State.running && !isTouchDevice()) requestLock();
+      }
+    }
+
+    function switchCraftTab(tab) {
+      const bC = document.getElementById('tab-btn-craft');
+      const bF = document.getElementById('tab-btn-furnace');
+      const bS = document.getElementById('tab-btn-shop');
+      const pC = document.getElementById('craft-pane-craft');
+      const pF = document.getElementById('craft-pane-furnace');
+      const pS = document.getElementById('craft-pane-shop');
+      [bC, bF, bS].forEach(b => { if (b) b.className = 'px-3 py-1.5 rounded-xl text-xs font-black bg-slate-800 text-slate-200 cursor-pointer'; });
+      [pC, pF, pS].forEach(p => { if (p) p.classList.add('hidden'); });
+      if (tab === 'craft') {
+        bC.className = 'px-3 py-1.5 rounded-xl text-xs font-black bg-amber-400 text-slate-950 cursor-pointer';
+        pC.classList.remove('hidden');
+      } else if (tab === 'furnace') {
+        bF.className = 'px-3 py-1.5 rounded-xl text-xs font-black bg-amber-400 text-slate-950 cursor-pointer';
+        pF.classList.remove('hidden');
+      } else {
+        bS.className = 'px-3 py-1.5 rounded-xl text-xs font-black bg-emerald-400 text-slate-950 cursor-pointer';
+        pS.classList.remove('hidden');
+      }
+    }
+
+    function renderCraftUI() {
+      const d = L();
+      const sum = document.getElementById('bag-summary');
+      if (sum) {
+        const keys = ['wood', 'stone', 'coal', 'iron', 'gold', 'diamond', 'apple', 'fruit', 'fish', 'raw_meat', 'cooked_meat'];
+        sum.innerHTML = keys.map(k =>
+          `<span class="px-2 py-0.5 rounded-md bg-slate-900 border border-slate-700">${d.items[k] || k}: <b>${State.bag[k] || 0}</b></span>`
+        ).join('');
+      }
+      const pane = document.getElementById('craft-pane-craft');
+      if (pane) {
+        pane.innerHTML = d.recipes.map(r =>
+          `<div class="p-2.5 rounded-xl bg-slate-900/90 border border-slate-700/80 flex items-center justify-between gap-2">
+            <div>
+              <div class="text-xs font-black text-white">${r.title}</div>
+              <div class="text-[10px] text-slate-400 font-semibold">${r.req}</div>
+            </div>
+            <button type="button" onclick="craftRecipe('${r.id}')" class="mc-btn px-2.5 py-1.5 rounded-lg text-[11px] font-black text-emerald-300 cursor-pointer">${r.btn}</button>
+          </div>`
+        ).join('');
+      }
+      const shopBal = document.getElementById('shop-balance-lbl');
+      if (shopBal) shopBal.textContent = `Monedha: ${State.coins || 0} 🪙`;
+      const shopList = document.getElementById('shop-items-list');
+      if (shopList) {
+        shopList.innerHTML = SHOP_CATALOG.map(s =>
+          `<div class="p-2.5 rounded-xl bg-slate-900/90 border border-slate-700/80 flex items-center justify-between gap-2">
+            <div>
+              <div class="text-xs font-black text-white">${s.label}</div>
+              <div class="text-[10px] text-amber-300 font-bold">${s.price} 🪙</div>
+            </div>
+            <button type="button" onclick="buyShopItem('${s.id}', ${s.price})" class="mc-btn px-2.5 py-1.5 rounded-lg text-[11px] font-black text-emerald-300 cursor-pointer">Bli</button>
+          </div>`
+        ).join('');
+      }
+    }
+
+    function pickMode(m) {
+      State.mode = m;
+      const bs = document.getElementById('btn-mode-solo');
+      const bg = document.getElementById('btn-mode-group');
+      const gp = document.getElementById('group-panel');
+      if (m === 'solo') {
+        bs.className = 'p-2 rounded-xl border-2 border-emerald-400 bg-emerald-500/15 text-left cursor-pointer';
+        bg.className = 'p-2 rounded-xl border-2 border-slate-700 bg-slate-900/80 text-left cursor-pointer';
+        gp.classList.add('hidden');
+      } else {
+        bg.className = 'p-2 rounded-xl border-2 border-sky-400 bg-sky-500/15 text-left cursor-pointer';
+        bs.className = 'p-2 rounded-xl border-2 border-slate-700 bg-slate-900/80 text-left cursor-pointer';
+        gp.classList.remove('hidden');
+        if (!document.getElementById('input-code').value.trim()) genCode();
+        refreshGroupStatus();
+      }
+      updateHud();
+    }
+
+    function setGroupRole(role) {
+      State.groupRole = role;
+      const bh = document.getElementById('ui-host-btn');
+      const bj = document.getElementById('ui-join-btn');
+      if (role === 'host') {
+        bh.className = 'px-2 py-1 rounded-lg text-[10px] font-black bg-sky-400 text-slate-950 cursor-pointer';
+        bj.className = 'px-2 py-1 rounded-lg text-[10px] font-bold bg-slate-800 text-slate-200 cursor-pointer';
+      } else {
+        bj.className = 'px-2 py-1 rounded-lg text-[10px] font-black bg-sky-400 text-slate-950 cursor-pointer';
+        bh.className = 'px-2 py-1 rounded-lg text-[10px] font-bold bg-slate-800 text-slate-200 cursor-pointer';
+      }
+      refreshGroupStatus();
+    }
+
+    function genCode() {
+      const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+      let c = '';
+      for (let i = 0; i < 5; i++) c += chars[Math.floor(Math.random() * chars.length)];
+      State.code = c;
+      document.getElementById('input-code').value = c;
+      refreshGroupStatus();
+    }
+
+    function copyCode() {
+      const el = document.getElementById('input-code');
+      el.select();
+      try { document.execCommand('copy'); } catch (e) {}
+    }
+
+    function openLobby() {
+      saveProgress();
+      State.running = false;
+      try { if (document.pointerLockElement) document.exitPointerLock(); } catch (e) {}
+      document.getElementById('lobby-modal').classList.remove('hidden');
+      document.getElementById('crosshair').classList.add('hidden');
+      document.getElementById('touch-ui').classList.add('hidden');
+      const sb = document.getElementById('save-banner');
+      sb.classList.remove('hidden');
+      document.getElementById('save-banner-txt').textContent = L().savedTxt(State.level, State.kills);
+    }
+
+    function goBackSmart() {
+      const craftOpen = !document.getElementById('craft-modal').classList.contains('hidden');
+      if (craftOpen) { toggleCraftModal(false); return; }
+      const lobbyOpen = !document.getElementById('lobby-modal').classList.contains('hidden');
+      if (lobbyOpen) {
+        if (State.mode === 'group' && !document.getElementById('group-panel').classList.contains('hidden')) { pickMode('solo'); return; }
+        if (State.sceneReady) launchGame();
+        return;
+      }
+      openLobby();
+    }
+
+    function requestLock() {
+      if (isTouchDevice() || !State.running) return;
+      if (performance.now() < pointerLockCooldownUntil) return;
+      try {
+        if (!renderer || !renderer.domElement || typeof renderer.domElement.requestPointerLock !== 'function') return;
+        if (document.pointerLockElement === renderer.domElement) return;
+        const res = renderer.domElement.requestPointerLock();
+        if (res && typeof res.catch === 'function') res.catch(() => { pointerLockCooldownUntil = performance.now() + 1200; });
+      } catch (e) { pointerLockCooldownUntil = performance.now() + 1200; }
+    }
+
+    function renderHotbar() {
+      const row = document.getElementById('hotbar-row');
+      const lbl = document.getElementById('active-item-name');
+      if (!row) return;
+      row.innerHTML = '';
+
+      State.hotbar.forEach((slot, idx) => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'hotbar-slot' + (idx === State.slot ? ' active' : '');
+        btn.onclick = () => { State.slot = idx; renderHotbar(); rebuildHandModel(); };
+
+        if (slot && slot.id && slot.count > 0 && ITEMS[slot.id]) {
+          const item = ITEMS[slot.id];
+          btn.innerHTML = `<span class="text-lg sm:text-xl">${item.icon}</span>` +
+            (slot.count > 1 ? `<span class="absolute bottom-0.5 right-1 text-[10px] font-black text-white drop-shadow">${slot.count}</span>` : '');
+        }
+        row.appendChild(btn);
+      });
+
+      const cur = heldSlot();
+      if (lbl) {
+        lbl.textContent = (cur && cur.id && cur.count > 0 && ITEMS[cur.id])
+          ? `${L().items[cur.id] || cur.id}${cur.count > 1 ? ' ×' + cur.count : ''}`
+          : '';
+      }
+      rebuildHandModel();
+    }
+
+    function updateHud() {
+      document.getElementById('hud-name').textContent = State.name;
+      document.getElementById('hud-mode').textContent = State.mode === 'group' ? `${L().groupBadge}: ${State.code}` : L().soloBadge;
+      document.getElementById('hud-level').textContent = L().levelTxt(State.level);
+      document.getElementById('hud-wave').textContent = `(${State.waveKills}/${State.waveGoal})`;
+      const coinsEl = document.getElementById('hud-coins');
+      if (coinsEl) coinsEl.textContent = `${State.coins || 0}🪙`;
+
+      const peaceBadge = document.getElementById('hud-peace-badge');
+      if (peaceBadge) {
+        if (State.combatUnlocked) {
+          peaceBadge.textContent = '⚔️ Luftë Aktive';
+          peaceBadge.className = 'ba-panel px-2.5 py-1.5 rounded-xl text-xs font-black text-rose-300';
+        } else {
+          peaceBadge.textContent = '🕊️ Paqe: Mblidh Fruta & Peshko';
+          peaceBadge.className = 'ba-panel px-2.5 py-1.5 rounded-xl text-xs font-black text-sky-300';
+        }
+      }
+
+      const heartsEl = document.getElementById('hearts-row');
+      const totalHearts = Math.floor(maxHpNow() / 2);
+      let heartsHtml = '';
+      for (let i = 0; i < totalHearts; i++) {
+        const hHp = State.hp - i * 2;
+        const isGold = i >= 10;
+        if (hHp >= 2) heartsHtml += `<span>${isGold ? '💖' : '❤️'}</span>`;
+        else if (hHp >= 1) heartsHtml += `<span>🧡</span>`;
+        else heartsHtml += `<span class="opacity-30">🖤</span>`;
+      }
+      heartsEl.innerHTML = heartsHtml;
+
+      const gaBadge = document.getElementById('hud-goldapple-badge');
+      if (hasGoldHearts()) {
+        gaBadge.classList.remove('hidden');
+        document.getElementById('hud-ga-time').textContent = `${Math.max(1, Math.ceil((State.gaUntil - Date.now()) / 1000))}s`;
+      } else {
+        gaBadge.classList.add('hidden');
+      }
+
+      const sp = Math.round(State.swordPower);
+      document.getElementById('sword-power-bar').style.width = `${sp}%`;
+      document.getElementById('sword-power-pct').textContent = `${sp}%`;
+    }
+
+    function setLang(lang) {
+      if (!I18N[lang]) return;
+      currentLang = lang;
+      const d = L();
+      document.getElementById('ui-sub').textContent = d.sub;
+      document.getElementById('btn-lobby-back').textContent = d.backBtn;
+      document.getElementById('btn-group-back').textContent = d.backBtn;
+      document.getElementById('btn-hud-back').textContent = d.backBtn;
+      document.getElementById('ui-name-lbl').textContent = d.nameLbl;
+      document.getElementById('ui-mode-lbl').textContent = d.modeLbl;
+      document.getElementById('ui-solo-t').textContent = d.soloT;
+      document.getElementById('ui-solo-d').textContent = d.soloD;
+      document.getElementById('ui-group-t').textContent = d.groupT;
+      document.getElementById('ui-group-d').textContent = d.groupD;
+      document.getElementById('ui-code-lbl').textContent = d.codeLbl;
+      document.getElementById('ui-host-btn').textContent = d.hostBtn;
+      document.getElementById('ui-join-btn').textContent = d.joinBtn;
+      document.getElementById('ui-gen-btn').textContent = d.genBtn;
+      document.getElementById('ui-copy-btn').textContent = d.copyBtn;
+      document.getElementById('btn-start').textContent = d.playBtn;
+      document.getElementById('btn-reset-save').textContent = d.resetBtn;
+      document.getElementById('hud-craft-lbl').textContent = d.craftHud;
+      document.getElementById('t-jump-btn').textContent = d.jumpTxt;
+      document.getElementById('t-use-btn').textContent = d.useTxt;
+      document.getElementById('t-hit-btn').textContent = d.hitTxt;
+      document.getElementById('tab-btn-craft').textContent = d.tabCraft;
+      document.getElementById('tab-btn-furnace').textContent = d.tabFurnace;
+      document.getElementById('ui-soba-t').textContent = d.sobaT;
+      document.getElementById('ui-soba-d').textContent = d.sobaD;
+      document.getElementById('btn-smelt').textContent = d.smeltBtn;
+      document.getElementById('go-title').textContent = d.goTitle;
+      document.getElementById('go-respawn-btn').textContent = d.goRespawn;
+      document.getElementById('go-menu-btn').textContent = d.goMenu;
+
+      if (!document.getElementById('save-banner').classList.contains('hidden')) {
+        document.getElementById('save-banner-txt').textContent = d.savedTxt(State.level, State.kills);
+      }
+      document.querySelectorAll('[data-lang]').forEach(btn => {
+        btn.className = btn.getAttribute('data-lang') === lang
+          ? 'px-1.5 py-1 rounded-lg text-[10px] font-black bg-emerald-400 text-slate-950 cursor-pointer'
+          : 'px-1.5 py-1 rounded-lg text-[10px] font-bold text-slate-300 hover:text-white cursor-pointer';
+      });
+      refreshGroupStatus(); renderCraftUI(); renderHotbar(); updateHud();
+    }
+
+    function initScene() {
+      if (State.sceneReady || typeof window.THREE === 'undefined' || window.__threeFailed) return false;
+      try {
+        boxGeo = new THREE.BoxGeometry(1, 1, 1);
+        playerPos = new THREE.Vector3(0, 8, 12);
+        playerVel = new THREE.Vector3(0, 0, 0);
+
+        const canvas = document.getElementById('game-canvas');
+        renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+        renderer.setSize(window.innerWidth, window.innerHeight);
+
+        scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x38bdf8);
+        scene.fog = new THREE.FogExp2(0x38bdf8, 0.014);
+
+        camera = new THREE.PerspectiveCamera(72, window.innerWidth / window.innerHeight, 0.1, 140);
+        camera.rotation.order = 'YXZ';
+        scene.add(camera);
+
+        handPivot = new THREE.Group();
+        handPivot.position.set(0.34, -0.28, -0.45);
+        const forearm = new THREE.Mesh(
+          new THREE.BoxGeometry(0.14, 0.14, 0.36),
+          new THREE.MeshStandardMaterial({ color: 0xfdba74, roughness: 0.65 })
+        );
+        handItemGroup = new THREE.Group();
+        handPivot.add(forearm, handItemGroup);
+        camera.add(handPivot);
+
+        playerThirdPersonMesh = makeDoll({ skin: 0xfdba74, armor: 0x059669, accent: 0x34d399, pants: 0x1e293b, visor: 0x34d399 });
+        playerThirdPersonMesh.visible = false;
+        scene.add(playerThirdPersonMesh);
+
+        hemiLight = new THREE.HemisphereLight(0xe0f2fe, 0x334155, 0.95);
+        scene.add(hemiLight);
+
+        sunLight = new THREE.DirectionalLight(0xfffbeb, 1.05);
+        sunLight.position.set(22, 36, 18);
+        scene.add(sunLight);
+
+        targetBox = new THREE.LineSegments(
+          new THREE.EdgesGeometry(new THREE.BoxGeometry(1.03, 1.03, 1.03)),
+          new THREE.LineBasicMaterial({ color: 0x0f172a })
+        );
+        targetBox.visible = false;
+        scene.add(targetBox);
+
+        initMaterials();
+        buildWorld();
+        spawnMobsAndPlayers();
+        rebuildHandModel();
+
+        playerPos.set(0, terrainY(0, 12) + 1.8, 12);
+        camera.position.copy(playerPos);
+
+        window.addEventListener('resize', () => {
+          if (!renderer || !camera) return;
+          camera.aspect = window.innerWidth / window.innerHeight;
+          camera.updateProjectionMatrix();
+          renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        State.sceneReady = true;
+        requestAnimationFrame(loop);
+        return true;
+      } catch (err) { return false; }
+    }
+
+    function launchGame() {
+      try {
+        SFX.init();
+        const rawName = (document.getElementById('input-name').value || '').trim();
+        State.name = rawName || 'ArenaHero';
+        if (State.mode === 'group') {
+          const rawCode = (document.getElementById('input-code').value || '').trim().toUpperCase();
+          State.code = (rawCode || 'B7K4P').slice(0, 5);
+          document.getElementById('input-code').value = State.code;
+          connectGroupChannel();
+        }
+        if (!State.sceneReady) initScene();
+        if (State.hp <= 0) State.hp = maxHpNow();
+        State.running = true;
+
+        document.getElementById('lobby-modal').classList.add('hidden');
+        document.getElementById('gameover-modal').classList.add('hidden');
+        document.getElementById('gameover-modal').classList.remove('flex');
+        document.getElementById('hud-top').classList.remove('hidden');
+        document.getElementById('hud-top').classList.add('flex');
+        document.getElementById('hud-bottom').classList.remove('hidden');
+        document.getElementById('hud-bottom').classList.add('flex');
+        document.getElementById('crosshair').classList.remove('hidden');
+
+        if (isTouchDevice()) {
+          document.getElementById('touch-ui').classList.remove('hidden');
+          document.getElementById('touch-ui').classList.add('flex');
+        } else {
+          requestLock();
+        }
+        renderHotbar(); updateHud(); saveProgress();
+      } catch (e) {}
+    }
+
+    const keys = {};
+    let lastWTap = 0, doubleTapSprint = false;
+
+    function triggerJump() {
+      if (!State.running || !playerVel) return;
+      if (swimming) playerVel.y = 5.6;
+      else if (grounded) { playerVel.y = 8.4; grounded = false; }
+    }
+
+    function bindControls() {
+      window.addEventListener('keydown', e => {
+        if (e.code === 'KeyW' && !keys['KeyW']) {
+          const now = performance.now();
+          if (now - lastWTap < 280) doubleTapSprint = true;
+          lastWTap = now;
+        }
+        keys[e.code] = true;
+
+        if (e.code === 'KeyE') {
+          const isClosed = document.getElementById('craft-modal').classList.contains('hidden');
+          if (State.running || !isClosed) toggleCraftModal(isClosed);
+        } else if (e.code === 'Tab' && State.running) {
+          e.preventDefault();
+          const tabEl = document.getElementById('tab-overlay');
+          tabEl.classList.remove('hidden');
+          document.getElementById('tab-lvl-badge').textContent = L().levelTxt(State.level);
+          const list = [
+            `🟢 ${State.name} (${L().levelTxt(State.level)})`,
+            ...Array.from(remotePlayers.values()).map(p => `🔵 ${p.name}`)
+          ];
+          document.getElementById('tab-players-list').innerHTML = list.map(x => `<div>${x}</div>`).join('');
+        }
+
+        if (!State.running) return;
+        if (e.code.startsWith('Digit')) {
+          const n = parseInt(e.code.replace('Digit', ''), 10);
+          if (n >= 1 && n <= 9) { State.slot = n - 1; renderHotbar(); }
+        } else if (e.code === 'Space') triggerJump();
+        else if (e.code === 'KeyV') toggleVoiceChat();
+        else if (e.code === 'KeyF') primaryAction();
+        else if (e.code === 'KeyR' || e.code === 'KeyQ') secondaryAction();
+        else if (e.code === 'KeyB') SFX.horn();
+        else if (e.code === 'KeyP') toggleSiren();
+        else if (e.code === 'KeyH') {
+          State.thirdPerson = !State.thirdPerson;
+          if (playerThirdPersonMesh) playerThirdPersonMesh.visible = State.thirdPerson;
+          if (handPivot) handPivot.visible = !State.thirdPerson;
+        }
+      });
+
+      window.addEventListener('keyup', e => {
+        keys[e.code] = false;
+        if (e.code === 'KeyW') doubleTapSprint = false;
+        if (e.code === 'Tab') document.getElementById('tab-overlay').classList.add('hidden');
+      });
+
+      window.addEventListener('wheel', e => {
+        if (!State.running) return;
+        State.slot = (State.slot + (e.deltaY > 0 ? 1 : -1) + 9) % 9;
+        renderHotbar();
+      }, { passive: true });
+
+      let draggingLook = false, lastX = 0, lastY = 0;
+
+      window.addEventListener('mousedown', e => {
+        if (!State.running) return;
+        if (e.target && e.target.closest('button, input, .ba-panel')) return;
+        if (!document.pointerLockElement && !isTouchDevice()) requestLock();
+        draggingLook = true; lastX = e.clientX; lastY = e.clientY;
+        if (e.button === 0) primaryAction();
+        else if (e.button === 2) secondaryAction();
+      });
+
+      window.addEventListener('mouseup', () => { draggingLook = false; });
+      window.addEventListener('contextmenu', e => { if (State.running) e.preventDefault(); });
+
+      window.addEventListener('mousemove', e => {
+        if (!State.running) return;
+        let dx = 0, dy = 0;
+        if (document.pointerLockElement) { dx = e.movementX || 0; dy = e.movementY || 0; }
+        else if (draggingLook) { dx = e.clientX - lastX; dy = e.clientY - lastY; lastX = e.clientX; lastY = e.clientY; }
+        yaw -= dx * 0.0024;
+        pitch = Math.max(-1.42, Math.min(1.42, pitch - dy * 0.0024));
+      });
+
+      window.addEventListener('touchstart', e => {
+        if (!State.running || !e.touches.length) return;
+        if (e.target && e.target.closest('button, .ba-panel')) return;
+        lastX = e.touches[0].clientX; lastY = e.touches[0].clientY;
+      }, { passive: true });
+
+      window.addEventListener('touchmove', e => {
+        if (!State.running || !e.touches.length) return;
+        if (e.target && e.target.closest('button, .ba-panel')) return;
+        const tx = e.touches[0].clientX, ty = e.touches[0].clientY;
+        yaw -= (tx - lastX) * 0.0052;
+        pitch = Math.max(-1.42, Math.min(1.42, pitch - (ty - lastY) * 0.0052));
+        lastX = tx; lastY = ty;
+      }, { passive: true });
+
+      document.querySelectorAll('.touch-pad').forEach(btn => {
+        const k = btn.getAttribute('data-key');
+        btn.addEventListener('touchstart', e => { e.preventDefault(); keys[k] = true; }, { passive: false });
+        btn.addEventListener('touchend', e => { e.preventDefault(); keys[k] = false; }, { passive: false });
+      });
+    }
+
+    function stepDayNight(dt) {
+      State.worldTime = (State.worldTime + dt * 0.012) % 1;
+      const dayFactor = Math.max(0.22, Math.sin(State.worldTime * Math.PI));
+      const skyHex = dayFactor > 0.45 ? 0x38bdf8 : dayFactor > 0.28 ? 0xf97316 : 0x0f172a;
+      scene.background.setHex(skyHex);
+      scene.fog.color.setHex(skyHex);
+      sunLight.intensity = 0.35 + dayFactor * 0.85;
+      hemiLight.intensity = 0.45 + dayFactor * 0.6;
+    }
+
+    function hasSolidBlockAt(x, y, z) {
+      const item = blocks.get(bKey(Math.round(x), Math.round(y), Math.round(z)));
+      return !!(item && item.type !== 'water');
+    }
+
+    function getStandingFloorY(x, z, curEyeY) {
+      const rx = Math.round(x), rz = Math.round(z);
+      const eyeOffset = State.crouching ? 1.2 : 1.75;
+      const feetY = curEyeY - eyeOffset;
+      const startCheckY = Math.min(18, Math.floor(feetY + 0.6));
+      for (let y = startCheckY; y >= -5; y--) {
+        const b = blocks.get(bKey(rx, y, rz));
+        if (b && b.type !== 'water') {
+          return y + 0.5 + eyeOffset;
+        }
+      }
+      return -4 + 0.5 + eyeOffset;
+    }
+
+    function hasWaterAt(x, y, z) {
+      const item = blocks.get(bKey(Math.round(x), Math.round(y), Math.round(z)));
+      if (item && item.type === 'water') return true;
+      for (const p of puddles) {
+        if (Math.hypot(x - p.x, z - p.z) <= 2.95 && Math.abs(y - p.y) <= 2.2) {
+          return true;
+        }
+      }
+      return false;
+    }
+
+    function stepPlayer(dt) {
+      const fwd = (keys['KeyW'] ? 1 : 0) - (keys['KeyS'] ? 1 : 0);
+      const str = (keys['KeyD'] ? 1 : 0) - (keys['KeyA'] ? 1 : 0);
+
+      const forwardVec = new THREE.Vector3(-Math.sin(yaw), 0, -Math.cos(yaw));
+      const rightVec = new THREE.Vector3(Math.cos(yaw), 0, -Math.sin(yaw));
+      const wish = new THREE.Vector3().addScaledVector(forwardVec, fwd).addScaledVector(rightVec, str);
+      if (wish.lengthSq() > 1) wish.normalize();
+
+      State.crouching = !!(keys['ShiftLeft'] || keys['ShiftRight']);
+      const sprintHeld = keys['ControlLeft'] || doubleTapSprint;
+      const sprint = State.crouching ? 0.55 : (sprintHeld && wish.length() > 0.1 ? 1.42 : 1.0);
+
+      swimming = hasWaterAt(playerPos.x, playerPos.y - 0.6, playerPos.z) || hasWaterAt(playerPos.x, playerPos.y - 1.5, playerPos.z);
+      document.getElementById('underwater-tint').style.opacity = swimming ? '1' : '0';
+
+      const vehDef = State.ridingVehicle ? ITEMS[State.ridingVehicle] : null;
+      const onWaterBoat = State.ridingVehicle === 'boat' && swimming;
+      const baseSpd = onWaterBoat ? 12.5 : (vehDef ? vehDef.speed : (swimming ? 4.2 : 6.8));
+      const spd = baseSpd * sprint;
+      if (vehDef && wish.length() > 0.1) {
+        SFX.engineTick += dt;
+        if (SFX.engineTick > 0.16) { SFX.engineTick = 0; SFX.engineHum(sprint > 1.1 ? 1.4 : 0.9); }
+      }
+      playerVel.x = wish.x * spd; playerVel.z = wish.z * spd;
+      playerVel.y = onWaterBoat ? 0 : (swimming ? Math.max(-2.2, playerVel.y - 4.0 * dt) : playerVel.y - 21.5 * dt);
+
+      const nextX = Math.max(-25, Math.min(25, playerPos.x + playerVel.x * dt));
+      if (!hasSolidBlockAt(nextX, playerPos.y - 0.8, playerPos.z) && !hasSolidBlockAt(nextX, playerPos.y - 0.1, playerPos.z)) playerPos.x = nextX;
+
+      const nextZ = Math.max(-25, Math.min(25, playerPos.z + playerVel.z * dt));
+      if (!hasSolidBlockAt(playerPos.x, playerPos.y - 0.8, nextZ) && !hasSolidBlockAt(playerPos.x, playerPos.y - 0.1, nextZ)) playerPos.z = nextZ;
+
+      const prevY = playerPos.y;
+      playerPos.y += playerVel.y * dt;
+      const floorY = onWaterBoat ? 2.15 : getStandingFloorY(playerPos.x, playerPos.z, playerPos.y);
+
+      if (!grounded && !swimming) {
+        if (!wasAirborne) {
+          wasAirborne = true;
+          fallStartY = Math.max(prevY, playerPos.y);
+        } else if (playerPos.y > fallStartY) {
+          fallStartY = playerPos.y;
+        }
+      } else if (swimming) {
+        wasAirborne = false;
+        fallStartY = null;
+      }
+
+      if (playerPos.y <= floorY && playerVel.y <= 0) {
+        const landedFromAir = !grounded;
+        playerPos.y = floorY;
+        playerVel.y = 0;
+        grounded = true;
+
+        const safeWaterLanding = swimming || hasWaterAt(playerPos.x, floorY - 1.5, playerPos.z) || hasWaterAt(playerPos.x, floorY - 0.4, playerPos.z);
+        if (!safeWaterLanding && landedFromAir && wasAirborne && fallStartY !== null) {
+          const fallDist = fallStartY - playerPos.y;
+          if (fallDist >= 3.2) {
+            const fallDmg = Math.max(2, Math.round((fallDist - 2.4) * 1.5));
+            hurtPlayer(fallDmg, 'player', true);
+          }
+        }
+        wasAirborne = false;
+        fallStartY = null;
+      } else if (playerPos.y > floorY + 0.08 && !swimming) {
+        grounded = false;
+      }
+
+      if (State.ridingVehicle) {
+        const pv = parkedVehicles.find(v => v.id === State.ridingVehicle);
+        if (pv) {
+          pv.mesh.position.set(playerPos.x, playerPos.y - 1.2, playerPos.z);
+          pv.mesh.rotation.y = yaw + Math.PI;
+        }
+      }
+
+      if (playerThirdPersonMesh) {
+        playerThirdPersonMesh.position.set(playerPos.x, playerPos.y - 1.75, playerPos.z);
+        playerThirdPersonMesh.rotation.y = yaw + Math.PI;
+      }
+
+      if (State.thirdPerson) {
+        const camOffset = new THREE.Vector3(Math.sin(yaw) * 3.6, 1.35, Math.cos(yaw) * 3.6);
+        camera.position.copy(playerPos).add(camOffset);
+      } else {
+        camera.position.copy(playerPos);
+      }
+      camera.rotation.y = yaw;
+      camera.rotation.x = pitch;
+
+      return Math.min(1, wish.length() * sprint);
+    }
+
+    function stepTargetOutline() {
+      if (!targetBox || !camera) return;
+      const dir = new THREE.Vector3(0, 0, -1).applyEuler(new THREE.Euler(pitch, yaw, 0, 'YXZ'));
+      const ray = new THREE.Raycaster(camera.position, dir, 0, 5.2);
+      const hits = ray.intersectObjects(Array.from(blocks.values()).map(v => v.mesh), false);
+      if (hits.length > 0 && hits[0].object.userData && hits[0].object.userData.type !== 'water') {
+        const ud = hits[0].object.userData;
+        targetBox.position.set(ud.gx, ud.gy, ud.gz);
+        targetBox.visible = true;
+      } else {
+        targetBox.visible = false;
+      }
+    }
+
+    function stepCrates(now) {
+      for (const c of chests) {
+        if (!c.active && now >= c.respawnAt && playerPos && c.origin.distanceTo(playerPos) > 4.0) {
+          c.active = true; c.mesh.visible = true;
+        }
+        if (c.active) c.mesh.rotation.y += 0.015;
+      }
+    }
+
+    function stepPuddles(now) {
+      for (let i = puddles.length - 1; i >= 0; i--) {
+        const p = puddles[i];
+        if (now >= p.expiresAt) { scene.remove(p.mesh); puddles.splice(i, 1); continue; }
+        for (const m of mobs) {
+          if (Math.hypot(m.mesh.position.x - p.x, m.mesh.position.z - p.z) < 2.8) m.slowUntil = now + 900;
+        }
+      }
+    }
+
+    function stepPearls(dt, now) {
+      for (let i = pearls.length - 1; i >= 0; i--) {
+        const p = pearls[i];
+        p.vel.y -= 16 * dt;
+        p.mesh.position.addScaledVector(p.vel, dt);
+        const gy = terrainY(Math.round(p.mesh.position.x), Math.round(p.mesh.position.z)) + 1.75;
+        if (p.mesh.position.y <= gy || now - p.bornAt > 1800) {
+          playerPos.set(Math.max(-24, Math.min(24, p.mesh.position.x)), gy, Math.max(-24, Math.min(24, p.mesh.position.z)));
+          playerVel.set(0, 0, 0);
+          scene.remove(p.mesh); pearls.splice(i, 1);
+          SFX.pop(720, 420, 0.14);
+        }
+      }
+    }
+
+    function stepArrows(dt, now) {
+      for (let i = arrows.length - 1; i >= 0; i--) {
+        const a = arrows[i];
+        a.mesh.position.addScaledVector(a.vel, dt);
+        if (playerPos && a.mesh.position.distanceTo(playerPos) < 1.15) {
+          hurtPlayer(1.5, 'monkey');
+          scene.remove(a.mesh); arrows.splice(i, 1);
+          continue;
+        }
+        if (now - a.bornAt > 3000) { scene.remove(a.mesh); arrows.splice(i, 1); }
+      }
+    }
+
+    function stepMobs(dt, now) {
+      if (!playerPos) return;
+      for (const m of mobs) {
+        if (m.cd > 0) m.cd -= dt;
+        const slowFactor = now < (m.slowUntil || 0) ? 0.42 : 1.0;
+        const spd = m.spd * slowFactor;
+
+        if (m.inTree) {
+          m.mesh.lookAt(playerPos.x, m.mesh.position.y, playerPos.z);
+          if (State.combatUnlocked && m.mesh.position.distanceTo(playerPos) < 16 && m.cd <= 0) {
+            m.cd = 3.2;
+            const nut = new THREE.Mesh(new THREE.SphereGeometry(0.16, 8, 8), new THREE.MeshStandardMaterial({ color: 0x78350f }));
+            nut.position.copy(m.mesh.position).add(new THREE.Vector3(0, 0.5, 0));
+            const aim = playerPos.clone().sub(nut.position).normalize();
+            scene.add(nut);
+            arrows.push({ mesh: nut, vel: aim.multiplyScalar(14), bornAt: now });
+          }
+          continue;
+        }
+
+        const toP = new THREE.Vector3(playerPos.x - m.mesh.position.x, 0, playerPos.z - m.mesh.position.z);
+        const dist = toP.length();
+        const aggro = State.combatUnlocked && m.kind !== 'food_animal' && dist < 22;
+
+        let moveDir = null;
+        if (aggro) {
+          if (dist > 1.55) moveDir = toP.clone().normalize();
+          if (dist <= 1.85 && m.cd <= 0) { m.cd = 1.9; hurtPlayer(m.dmg || 1.5, m.kind); }
+        } else {
+          m.wanderTimer = (m.wanderTimer || 0) - dt;
+          if (m.wanderTimer <= 0) {
+            m.wanderTimer = 2.0 + Math.random() * 2.5;
+            m.wanderAngle = Math.random() * Math.PI * 2;
+          }
+          moveDir = new THREE.Vector3(Math.sin(m.wanderAngle), 0, Math.cos(m.wanderAngle));
+        }
+
+        if (moveDir) {
+          const nx = m.mesh.position.x + moveDir.x * spd * dt;
+          const nz = m.mesh.position.z + moveDir.z * spd * dt;
+          const curY = Math.round(m.mesh.position.y);
+          const blocked = Math.abs(nx) > 25 || Math.abs(nz) > 25 || isLakeCoord(Math.round(nx), Math.round(nz)) ||
+                          hasSolidBlockAt(nx, curY, nz) || hasSolidBlockAt(nx, curY + 1, nz);
+          if (!blocked) {
+            m.mesh.position.x = nx;
+            m.mesh.position.z = nz;
+            m.mesh.rotation.y = Math.atan2(moveDir.x, moveDir.z);
+            m.phase += dt * 6.5;
+          } else {
+            m.wanderAngle += Math.PI * 0.65;
+          }
+        }
+
+        const gy = terrainY(Math.round(m.mesh.position.x), Math.round(m.mesh.position.z)) + 0.5;
+        m.mesh.position.y += (gy - m.mesh.position.y) * Math.min(1, dt * 12);
+
+        const rig = m.mesh.userData.rig;
+        if (rig) {
+          const sw = Math.sin(m.phase) * 0.45;
+          rig.lLeg.rotation.x = sw; rig.rLeg.rotation.x = -sw;
+          if (rig.bLLeg) { rig.bLLeg.rotation.x = -sw; rig.bRLeg.rotation.x = sw; }
+          if (rig.hpBar && rig.hpBar.sprite && camera) rig.hpBar.sprite.lookAt(camera.position);
+        }
+      }
+    }
+
+    let zoneHealAccum = 0, shopPromptCooldown = 0;
+    function stepLakeFishes(dt) {
+      for (const f of lakeFishes) {
+        f.angle += f.speed * dt;
+        const nx = 16 + Math.cos(f.angle) * f.radius;
+        const nz = 12 + Math.sin(f.angle) * f.radius;
+        f.mesh.position.set(nx, 0.72 + Math.sin(f.angle * 3) * 0.12, nz);
+        f.mesh.rotation.y = -f.angle;
+        if (f.tail) f.tail.rotation.y = Math.sin(f.angle * 12) * 0.45;
+      }
+    }
+
+    function stepHospitalAndRestaurant(dt) {
+      if (!playerPos) return;
+      if (shopPromptCooldown > 0) shopPromptCooldown -= dt;
+
+      const distShop = Math.hypot(playerPos.x - 0, playerPos.z - 3);
+      if (distShop < 2.8 && shopPromptCooldown <= 0 && document.getElementById('craft-modal').classList.contains('hidden')) {
+        shopPromptCooldown = 6.0;
+        toggleShopModal(true);
+        return;
+      }
+
+      const distHosp = Math.hypot(playerPos.x - 14, playerPos.z - 4);
+      if (distHosp < 4.5 && State.hp < maxHpNow()) {
+        zoneHealAccum += dt;
+        if (zoneHealAccum >= 0.8) {
+          zoneHealAccum = 0;
+          State.hp = Math.min(maxHpNow(), State.hp + 2);
+          SFX.pop(520, 780, 0.08);
+          updateHud();
+        }
+        return;
+      }
+
+      const distRest = Math.hypot(playerPos.x + 14, playerPos.z - 4);
+      if (distRest < 5.0 && State.hp < maxHpNow()) {
+        zoneHealAccum += dt;
+        if (zoneHealAccum >= 0.9) {
+          zoneHealAccum = 0;
+          State.hp = Math.min(maxHpNow(), State.hp + 2);
+          SFX.pop(460, 720, 0.08);
+          updateHud();
+        }
+      }
+    }
+
+    let lastNetSync = 0, lastAutoSave = 0;
+    function loop(now) {
+      requestAnimationFrame(loop);
+      try {
+        const dt = Math.min(0.05, (now - (loop._prev || now)) / 1000);
+        loop._prev = now;
+
+        if (State.running && scene && renderer && camera && playerPos) {
+          if (State.attackCd > 0) {
+            State.attackCd = Math.max(0, State.attackCd - dt);
+            document.getElementById('atk-cd-bar').style.opacity = '1';
+            document.getElementById('atk-cd-fill').style.width = `${Math.round((1 - State.attackCd / 0.45) * 100)}%`;
+          } else {
+            document.getElementById('atk-cd-bar').style.opacity = '0';
+          }
+
+          if (State.hp < maxHpNow() && now - State.lastCombatAt > 6500) {
+            State.regenAccum += dt;
+            if (State.regenAccum >= 4.0) { State.regenAccum = 0; State.hp = Math.min(maxHpNow(), State.hp + 1); updateHud(); }
+          } else { State.regenAccum = 0; }
+
+          stepDayNight(dt);
+          const spdRatio = stepPlayer(dt);
+          stepCoinPickups();
+          stepLakeFishes(dt);
+          stepHospitalAndRestaurant(dt);
+          updateHandAnimation(dt, spdRatio);
+          stepTargetOutline();
+          stepCrates(now);
+          stepPuddles(now);
+          stepPearls(dt, now);
+          stepArrows(dt, now);
+          stepMobs(dt, now);
+          if (hasGoldHearts()) updateHud();
+
+          if (State.mode === 'group' && now - lastNetSync > 90) {
+            lastNetSync = now;
+            broadcastNet({ type: 'state', name: State.name, x: Math.round(playerPos.x * 100) / 100, y: Math.round(playerPos.y * 100) / 100, z: Math.round(playerPos.z * 100) / 100, yaw: Math.round(yaw * 100) / 100 });
+          }
+          if (now - lastAutoSave > 6000) { lastAutoSave = now; saveProgress(); }
+        }
+        if (renderer && scene && camera) renderer.render(scene, camera);
+      } catch (e) {}
+    }
+
+    window.addEventListener('beforeunload', () => {
+      try { if (State.running) saveProgress(); if (State.mode === 'group') broadcastNet({ type: 'leave' }); } catch (e) {}
+    });
+
+    window.addEventListener('load', () => {
+      try { bindControls(); setLang('sq'); loadSavedProgress(); initScene(); } catch (e) {}
+    });
+  </script>
 </body>
 </html>
