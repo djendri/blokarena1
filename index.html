@@ -172,7 +172,7 @@
   <meta name="theme-color" content="#2f9e6b" />
 <style>
 #mobile-menu-toggle,#mobile-stick{display:none}
-@media (pointer:coarse){
+@media (pointer:coarse), (any-pointer:coarse){
 #hud-top{top: max(4px,env(safe-area-inset-top));left: max(6px,env(safe-area-inset-left));right:max(6px,env(safe-area-inset-right));gap:4px}
 #hud-top>div:first-child{max-width:55%;gap:3px}
 #hud-top .ba-panel,#hud-top .mc-btn{padding:4px 6px;font-size:10px;background:rgba(15,23,42,.72)}
@@ -183,7 +183,14 @@
 #hud-bottom{bottom:max(4px,env(safe-area-inset-bottom));width:auto;max-width:64vw}
 #hud-bottom>div:first-child{position:fixed;left:0;top:0;display:none}
 #hud-top #hearts-row{font-size:11px;gap:0;flex-wrap:wrap}
-#hud-top #mobile-health{display:flex;flex-wrap:wrap;gap:3px;width:100%}
+#hud-top #mobile-health{display:flex;flex-wrap:nowrap;gap:3px;width:auto;position:absolute;top:0;left:50%;transform:translateX(-50%);pointer-events:none;white-space:nowrap}
+#hud-top #mobile-health .ba-panel{padding:3px 4px;font-size:9px;gap:2px}
+#hud-top #mobile-health #hearts-row{font-size:clamp(8px,1.35vw,11px);flex-wrap:nowrap}
+#mobile-health .w-16{width:clamp(20px,4vw,40px)}
+#hud-top>div:first-child{max-width:36%}
+#hud-top>div:nth-child(2){max-width:25%}
+#hud-top>div:nth-child(2).mobile-open{max-width:44%;z-index:2}
+@media (max-width:600px) and (orientation:portrait){#hud-top #mobile-health{top:48px;left:0;transform:none}}
 #hotbar-row{gap:2px;padding:3px;overflow:visible}
 .hotbar-slot{width:clamp(23px,5.8vw,36px);height:clamp(25px,5.8vw,36px);border-radius:6px}
 .hotbar-slot>span:first-child{font-size:15px}
@@ -3210,12 +3217,12 @@
   </script>
 <script>
 document.addEventListener('DOMContentLoaded',()=>{
- const mq=matchMedia('(pointer:coarse)');
+ const mq=matchMedia('(pointer:coarse), (any-pointer:coarse)');
  const menu=document.getElementById('mobile-menu-toggle');
  const health=document.querySelector('#hud-bottom>div:first-child');
  const home=health.parentElement;
  const left=document.querySelector('#hud-top>div:first-child');
- function layout(){if(mq.matches){health.id='mobile-health';left.appendChild(health);}else{health.removeAttribute('id');home.prepend(health);menu.parentElement.classList.remove('mobile-open');}}
+ function layout(){if(mq.matches || /Android|iPhone|iPad|iPod/i.test(navigator.userAgent)){health.id='mobile-health';left.appendChild(health);}else{health.removeAttribute('id');home.prepend(health);menu.parentElement.classList.remove('mobile-open');}}
  layout();mq.addEventListener?.('change',layout);
  menu.addEventListener('click',()=>{const open=menu.parentElement.classList.toggle('mobile-open');menu.setAttribute('aria-expanded',String(open));});
 });
