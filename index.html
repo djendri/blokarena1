@@ -170,6 +170,33 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="BLOKARENA" />
   <meta name="theme-color" content="#2f9e6b" />
+<style>
+#mobile-menu-toggle,#mobile-stick{display:none}
+@media (pointer:coarse){
+#hud-top{top: max(4px,env(safe-area-inset-top));left: max(6px,env(safe-area-inset-left));right:max(6px,env(safe-area-inset-right));gap:4px}
+#hud-top>div:first-child{max-width:55%;gap:3px}
+#hud-top .ba-panel,#hud-top .mc-btn{padding:4px 6px;font-size:10px;background:rgba(15,23,42,.72)}
+#hud-top>div:nth-child(2){max-width:44%;gap:3px}
+#hud-top>div:nth-child(2):not(.mobile-open)>:not(#mobile-menu-toggle):not([onclick="toggleShopModal(true)"]){display:none}
+#mobile-menu-toggle{display:block;min-width:36px;min-height:34px}
+#hud-top>div.mobile-open{background:rgba(15,23,42,.94);padding:5px;border-radius:10px;max-height:65dvh;overflow:auto}
+#hud-bottom{bottom:max(4px,env(safe-area-inset-bottom));width:auto;max-width:64vw}
+#hud-bottom>div:first-child{position:fixed;left:0;top:0;display:none}
+#hud-top #hearts-row{font-size:11px;gap:0;flex-wrap:wrap}
+#hud-top #mobile-health{display:flex;flex-wrap:wrap;gap:3px;width:100%}
+#hotbar-row{gap:2px;padding:3px;overflow:visible}
+.hotbar-slot{width:clamp(23px,5.8vw,36px);height:clamp(25px,5.8vw,36px);border-radius:6px}
+.hotbar-slot>span:first-child{font-size:15px}
+#active-item-name{font-size:9px;padding:1px 4px}
+#touch-ui{bottom:max(12px,env(safe-area-inset-bottom));left:max(12px,env(safe-area-inset-left));right:max(12px,env(safe-area-inset-right))}
+#touch-ui>div:first-child>.touch-pad,#touch-ui>div:first-child>div:not(#mobile-stick){display:none}
+#mobile-stick{display:block;position:relative;width:clamp(70px,22vh,100px);aspect-ratio:1;border:1px solid #a7c8df;border-radius:50%;background:rgba(15,23,42,.42);touch-action:none}
+#mobile-stick-knob{position:absolute;left:50%;top:50%;width:42%;height:42%;border-radius:50%;background:rgba(190,220,240,.75);transform:translate(-50%,-50%);pointer-events:none}
+#touch-ui>div:last-child{display:grid;grid-template-columns:repeat(2,44px);gap:5px}
+#touch-ui>div:last-child>button{width:44px;height:44px;padding:0;border-radius:50%;font-size:9px;background:rgba(15,55,80,.75);touch-action:manipulation}
+#t-jump-btn{grid-column:2}#t-hit-btn{background:rgba(0,130,105,.8)!important}
+}
+</style>
 </head>
 <body>
   <canvas id="game-canvas"></canvas>
@@ -201,6 +228,7 @@
     </div>
 
     <div class="flex flex-wrap items-center justify-end gap-1.5 pointer-events-auto">
+      <button id="mobile-menu-toggle" type="button" class="mc-btn rounded-lg" aria-label="Menu" aria-expanded="false">☰</button>
       <div class="ba-panel rounded-xl p-0.5 flex gap-0.5">
         <button type="button" onclick="setLang('sq')" data-lang="sq" class="px-2 py-1 rounded-lg text-[11px] font-black cursor-pointer">🇦🇱 SQ</button>
         <button type="button" onclick="setLang('de')" data-lang="de" class="px-2 py-1 rounded-lg text-[11px] font-black cursor-pointer">🇩🇪 DE</button>
@@ -267,6 +295,7 @@
   <!-- Touch Controls -->
   <div id="touch-ui" class="fixed inset-x-3 bottom-20 z-20 hidden justify-between items-end pointer-events-none sm:bottom-24">
     <div class="pointer-events-auto flex flex-col items-center gap-1">
+      <div id="mobile-stick" role="group" aria-label="Movement joystick"><div id="mobile-stick-knob"></div></div>
       <button type="button" data-key="KeyW" class="touch-pad mc-btn w-11 h-11 rounded-xl font-black text-sm">▲</button>
       <div class="flex gap-1">
         <button type="button" data-key="KeyA" class="touch-pad mc-btn w-11 h-11 rounded-xl font-black text-sm">◀</button>
@@ -2785,21 +2814,32 @@
         pitch = Math.max(-1.42, Math.min(1.42, pitch - dy * 0.0024));
       });
 
+      let lookTouchId = null;
       window.addEventListener('touchstart', e => {
         if (!State.running || !e.touches.length) return;
-        if (e.target && e.target.closest('button, .ba-panel')) return;
-        lastX = e.touches[0].clientX; lastY = e.touches[0].clientY;
+        if (e.target && e.target.closest('button, .ba-panel, #mobile-stick')) return;
+        if(lookTouchId!==null)return; const t=e.changedTouches[0]; lookTouchId=t.identifier; lastX=t.clientX; lastY=t.clientY;
       }, { passive: true });
 
       window.addEventListener('touchmove', e => {
         if (!State.running || !e.touches.length) return;
-        if (e.target && e.target.closest('button, .ba-panel')) return;
-        const tx = e.touches[0].clientX, ty = e.touches[0].clientY;
+        if (e.target && e.target.closest('button, .ba-panel, #mobile-stick')) return;
+        const t=Array.from(e.touches).find(t=>t.identifier===lookTouchId); if(!t)return; const tx=t.clientX, ty=t.clientY;
         yaw -= (tx - lastX) * 0.0052;
         pitch = Math.max(-1.42, Math.min(1.42, pitch - (ty - lastY) * 0.0052));
         lastX = tx; lastY = ty;
       }, { passive: true });
 
+      for(const event of ['touchend','touchcancel'])window.addEventListener(event,e=>{if(Array.from(e.changedTouches).some(t=>t.identifier===lookTouchId))lookTouchId=null;});
+      const stick = document.getElementById('mobile-stick');
+      const knob = document.getElementById('mobile-stick-knob');
+      let stickPointer = null;
+      function clearStick(){stickPointer=null;for(const k of ['KeyW','KeyA','KeyS','KeyD']) keys[k]=false;knob.style.transform='translate(-50%,-50%)';}
+      function moveStick(e){const r=stick.getBoundingClientRect();let x=e.clientX-r.left-r.width/2,y=e.clientY-r.top-r.height/2;const max=r.width*.3,d=Math.hypot(x,y);if(d>max){x*=max/d;y*=max/d;}knob.style.transform='translate(calc(-50% + '+x+'px),calc(-50% + '+y+'px))';keys.KeyW=y<-8;keys.KeyS=y>8;keys.KeyA=x<-8;keys.KeyD=x>8;}
+      stick.addEventListener('pointerdown',e=>{if(stickPointer!==null)return;e.preventDefault();stickPointer=e.pointerId;stick.setPointerCapture(e.pointerId);moveStick(e);});
+      stick.addEventListener('pointermove',e=>{if(e.pointerId===stickPointer)moveStick(e);});
+      for(const event of ['pointerup','pointercancel','lostpointercapture'])stick.addEventListener(event,e=>{if(e.pointerId===stickPointer)clearStick();});
+      window.addEventListener('blur',clearStick);
       document.querySelectorAll('.touch-pad').forEach(btn => {
         const k = btn.getAttribute('data-key');
         btn.addEventListener('touchstart', e => { e.preventDefault(); keys[k] = true; }, { passive: false });
@@ -3168,5 +3208,17 @@
       try { bindControls(); setLang('sq'); loadSavedProgress(); initScene(); } catch (e) {}
     });
   </script>
+<script>
+document.addEventListener('DOMContentLoaded',()=>{
+ const mq=matchMedia('(pointer:coarse)');
+ const menu=document.getElementById('mobile-menu-toggle');
+ const health=document.querySelector('#hud-bottom>div:first-child');
+ const home=health.parentElement;
+ const left=document.querySelector('#hud-top>div:first-child');
+ function layout(){if(mq.matches){health.id='mobile-health';left.appendChild(health);}else{health.removeAttribute('id');home.prepend(health);menu.parentElement.classList.remove('mobile-open');}}
+ layout();mq.addEventListener?.('change',layout);
+ menu.addEventListener('click',()=>{const open=menu.parentElement.classList.toggle('mobile-open');menu.setAttribute('aria-expanded',String(open));});
+});
+</script>
 </body>
 </html>
