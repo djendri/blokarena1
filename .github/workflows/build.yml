@@ -1,25 +1,38 @@
-name: Build Windows
-on:
-  workflow_dispatch:
-  push:
-    branches: [main]
-jobs:
-  build:
-    runs-on: windows-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-      - name: Get three.js locally
-        shell: bash
-        run: |
-          npm install three@0.128.0 --no-save
-          cp node_modules/three/build/three.min.js three.min.js
-          sed -i 's#https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js#three.min.js#' index.html
-      - run: npm install
-      - run: npm run build
-      - uses: actions/upload-artifact@v4
-        with:
-          name: BLOKARENA-Windows
-          path: dist/*.exe
+{
+"name": "blokarena-3d",
+"version": "1.0.0",
+"description": "BLOKARENA 3D Survival Game — Desktop Windows Edition",
+"main": "main.js",
+"scripts": {
+"start": "electron .",
+"build": "electron-builder --win nsis --x64",
+"dist": "electron-builder --win nsis --x64"
+},
+"build": {
+"appId": "com.blokarena.game3d",
+"productName": "BLOKARENA 3D",
+"directories": {
+"output": "dist"
+},
+"files": [
+"main.js",
+"index.html",
+"three.min.js",
+"package.json"
+],
+"win": {
+"target": "nsis",
+"signAndEditExecutable": false
+},
+"nsis": {
+"oneClick": false,
+"allowToChangeInstallationDirectory": true,
+"createDesktopShortcut": true,
+"createStartMenuShortcut": true
+}
+},
+"devDependencies": {
+"electron": "33.2.0",
+"electron-builder": "25.1.8"
+}
+}
