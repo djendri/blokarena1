@@ -357,7 +357,7 @@
     </div>
   </div>
 
-  <!-- 4-Slot Crafting, Furnace & Shop Modal -->
+  <!-- Crafting, Furnace & Shop Modal -->
   <div id="craft-modal" class="fixed inset-0 z-40 hidden items-center justify-center p-3 bg-slate-950/75 backdrop-blur-sm">
     <div class="ba-panel w-full max-w-lg rounded-2xl p-4 max-h-[88vh] overflow-y-auto scroll-modal">
       <div class="flex items-center justify-between gap-2 mb-3">
@@ -612,9 +612,6 @@
     function L() { return I18N[currentLang] || I18N.sq; }
     function isTouchDevice() { return ('ontouchstart' in window) || (navigator.maxTouchPoints > 0); }
 
-    // =========================================================================
-    // AUDIO SFX
-    // =========================================================================
     const SFX = {
       ctx: null,
       sirenTimer: null,
@@ -791,9 +788,6 @@
       }
     }
 
-    // =========================================================================
-    // ITEMS, STATE & SAVE SYSTEM
-    // =========================================================================
     const ITEMS = {
       wooden_sword:  { icon: '🗡️', type: 'sword',   dmg: 6.5,  hex: 0xb45309 },
       stone_sword:   { icon: '⚔️', type: 'sword',   dmg: 8.5,  hex: 0x94a3b8 },
@@ -933,9 +927,6 @@
       } catch (e) { return false; }
     }
 
-    // =========================================================================
-    // MULTIPLAYER / GROUP / VOICE CHAT
-    // =========================================================================
     let voiceActive = false, voiceStream = null, voiceAnim = null, groupChannel = null, peerNet = null;
     let scene = null, camera = null, renderer = null, sunLight = null, hemiLight = null;
     let handPivot = null, handItemGroup = null, handSwing = 0, targetBox = null;
@@ -1073,4 +1064,2103 @@
       const bars = document.getElementById('voice-bars');
       if (voiceActive) {
         voiceActive = false;
-        if (voiceStream) { voiceStream.getTracks().forEach
+        if (voiceStream) { voiceStream.getTracks().forEach(t => t.stop()); voiceStream = null; }
+        if (voiceAnim) clearInterval(voiceAnim);
+        btn.classList.remove('voice-live'); bars.classList.add('hidden'); bars.classList.remove('flex');
+        return;
+      }
+      voiceActive = true;
+      btn.classList.add('voice-live'); bars.classList.remove('hidden'); bars.classList.add('flex');
+      try {
+        if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+          voiceStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          if (peerNet && voiceStream) {
+            for (const [peerId] of remoteConns) {
+              try { bindMediaCall(peerNet.call(peerId, voiceStream)); } catch (e) {}
+            }
+          }
+        }
+      } catch (e) {}
+      voiceAnim = setInterval(() => {
+        if (!voiceActive) return;
+        bars.querySelectorAll('i').forEach(bar => { bar.style.height = (4 + Math.floor(Math.random() * 10)) + 'px'; });
+      }, 150);
+    }
+
+    const blocks = new Map();
+    const chests = [];
+    const mobs = [];
+    const pearls = [];
+    const arrows = [];
+    const puddles = [];
+    const parkedVehicles = [];
+    const lakeFishes = [];
+    const coinPickups = [];
+    let playerPos = null, playerVel = null, playerThirdPersonMesh = null;
+    let yaw = 0, pitch = -0.06, grounded = false, swimming = false;
+    let fallStartY = null, wasAirborne = false;
+    let boxGeo = null;
+    const Mats = {};
+
+    function bKey(x, y, z) { return `${Math.round(x)},${Math.round(y)},${Math.round(z)}`; }
+
+    function makeCrystalTex(baseHex, facetHex, trimHex) {
+      const c = document.createElement('canvas');
+      c.width = 64; c.height = 64;
+      const ctx = c.getContext('2d');
+      ctx.fillStyle = baseHex; ctx.fillRect(0, 0, 64, 64);
+      ctx.fillStyle = facetHex;
+      ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(64, 0); ctx.lineTo(0, 64); ctx.closePath(); ctx.fill();
+      ctx.strokeStyle = trimHex; ctx.lineWidth = 3; ctx.strokeRect(2, 2, 60, 60);
+      const tex = new THREE.CanvasTexture(c);
+      tex.magFilter = THREE.NearestFilter; tex.minFilter = THREE.NearestFilter;
+      return tex;
+    }
+
+    function initMaterials() {
+      Mats.grass          = new THREE.MeshStandardMaterial({ map: makeCrystalTex('#15803d', '#16a34a', '#4ade80'), roughness: 0.72 });
+      Mats.dirt           = new THREE.MeshStandardMaterial({ map: makeCrystalTex('#6b442a', '#7c5338', '#9a6b4c'), roughness: 0.85 });
+      Mats.stone          = new THREE.MeshStandardMaterial({ map: makeCrystalTex('#475569', '#64748b', '#94a3b8'), roughness: 0.8 });
+      Mats.wood           = new THREE.MeshStandardMaterial({ map: makeCrystalTex('#78350f', '#92400e', '#d97706'), roughness: 0.78 });
+      Mats.leaves         = new THREE.MeshStandardMaterial({ map: makeCrystalTex('#0d9488', '#14b8a6', '#5eead4'), roughness: 0.75 });
+      Mats.asphalt        = new THREE.MeshStandardMaterial({ map: makeCrystalTex('#1e293b', '#0f172a', '#475569'), roughness: 0.88 });
+      Mats.tiles          = new THREE.MeshStandardMaterial({ map: makeCrystalTex('#e2e8f0', '#cbd5e1', '#94a3b8'), roughness: 0.45 });
+      Mats.sidewalk       = new THREE.MeshStandardMaterial({ map: makeCrystalTex('#94a3b8', '#cbd5e1', '#64748b'), roughness: 0.75 });
+      Mats.bed            = new THREE.MeshStandardMaterial({ map: makeCrystalTex('#dc2626', '#ef4444', '#f8fafc'), roughness: 0.65 });
+      Mats.table          = new THREE.MeshStandardMaterial({ map: makeCrystalTex('#92400e', '#b45309', '#fde68a'), roughness: 0.6 });
+      Mats.chair          = new THREE.MeshStandardMaterial({ map: makeCrystalTex('#b45309', '#d97706', '#fef3c7'), roughness: 0.65 });
+      Mats.hospital_wall  = new THREE.MeshStandardMaterial({ map: makeCrystalTex('#f8fafc', '#e2e8f0', '#cbd5e1'), roughness: 0.4 });
+      Mats.hospital_green = new THREE.MeshStandardMaterial({ map: makeCrystalTex('#65a30d', '#84cc16', '#ecfccb'), roughness: 0.5 });
+      Mats.vento_wall     = new THREE.MeshStandardMaterial({ map: makeCrystalTex('#78350f', '#92400e', '#f59e0b'), roughness: 0.55 });
+      Mats.vento_dark     = new THREE.MeshStandardMaterial({ map: makeCrystalTex('#1c1917', '#292524', '#d97706'), roughness: 0.45 });
+      Mats.coal           = new THREE.MeshStandardMaterial({ map: makeCrystalTex('#334155', '#1e293b', '#0f172a'), roughness: 0.85 });
+      Mats.iron           = new THREE.MeshStandardMaterial({ map: makeCrystalTex('#94a3b8', '#cbd5e1', '#f8fafc'), metalness: 0.35, roughness: 0.45 });
+      Mats.gold           = new THREE.MeshStandardMaterial({ map: makeCrystalTex('#ca8a04', '#eab308', '#fef08a'), metalness: 0.55, roughness: 0.32 });
+      Mats.diamond        = new THREE.MeshStandardMaterial({ map: makeCrystalTex('#0284c7', '#06b6d4', '#a5f3fc'), metalness: 0.45, roughness: 0.25 });
+      Mats.furnace        = new THREE.MeshStandardMaterial({ map: makeCrystalTex('#334155', '#475569', '#fb923c'), roughness: 0.65 });
+      Mats.tnt            = new THREE.MeshStandardMaterial({ map: makeCrystalTex('#dc2626', '#ef4444', '#fef08a'), roughness: 0.6 });
+      Mats.water          = new THREE.MeshStandardMaterial({ color: 0x0ea5e9, transparent: true, opacity: 0.68, roughness: 0.15 });
+    }
+
+    function createNameTag(text, bgHex = 'rgba(15,23,42,0.85)', textHex = '#ffffff') {
+      const c = document.createElement('canvas');
+      c.width = 256; c.height = 56;
+      const ctx = c.getContext('2d');
+      ctx.fillStyle = bgHex;
+      ctx.fillRect(10, 8, 236, 40);
+      ctx.strokeStyle = 'rgba(255,255,255,0.45)';
+      ctx.lineWidth = 3;
+      ctx.strokeRect(10, 8, 236, 40);
+      ctx.fillStyle = textHex;
+      ctx.font = 'bold 24px Inter, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(text, 128, 29);
+      const tex = new THREE.CanvasTexture(c);
+      const spr = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true }));
+      spr.scale.set(2.4, 0.55, 1);
+      return spr;
+    }
+
+    function addBuildingSign(text, bgHex, textHex, x, y, z) {
+      if (!scene) return;
+      const sign = createNameTag(text, bgHex, textHex);
+      sign.scale.set(3.8, 0.85, 1);
+      sign.position.set(x, y, z);
+      scene.add(sign);
+    }
+
+    function isLakeCoord(x, z) {
+      const dx = (x - 16) / 7.5;
+      const dz = (z - 12) / 6.5;
+      return (dx * dx + dz * dz) < 1.0;
+    }
+
+    function isCaveEntrance(x, z) {
+      const dx = (x + 18) / 5.5;
+      const dz = (z + 16) / 5.5;
+      return (dx * dx + dz * dz) < 1.0;
+    }
+
+    function terrainY(x, z) {
+      if (isLakeCoord(x, z)) return 0;
+      if (Math.abs(x) <= 22 && Math.abs(z - 6) <= 9) return 2;
+      const hill = Math.sin(x * 0.085) * Math.cos(z * 0.085) * 2.8 + Math.sin((x + z) * 0.05) * 1.4;
+      const caveDip = isCaveEntrance(x, z) ? -3.2 : 0;
+      return Math.max(1, Math.round(2.2 + hill + caveDip));
+    }
+
+    const BLOCK_MAX_HITS = {
+      leaves: 1, dirt: 2, grass: 2, asphalt: 2, tiles: 2, sidewalk: 2,
+      bed: 2, table: 2, chair: 2, wood: 3, coal: 3, stone: 3, furnace: 3,
+      iron: 4, gold: 4, diamond: 5, hospital_wall: 4, hospital_green: 4, vento_wall: 4, vento_dark: 4
+    };
+
+    function setBlock(x, y, z, type, fromNet = false) {
+      if (!scene || !boxGeo) return;
+      const rx = Math.round(x), ry = Math.round(y), rz = Math.round(z);
+      const k = bKey(rx, ry, rz);
+      if (blocks.has(k)) delBlock(rx, ry, rz, true);
+      const m = new THREE.Mesh(boxGeo, Mats[type] || Mats.stone);
+      m.position.set(rx, ry, rz);
+      const maxHits = BLOCK_MAX_HITS[type] || 3;
+      m.userData = { gx: rx, gy: ry, gz: rz, type, hitsLeft: maxHits, maxHits };
+      scene.add(m);
+      blocks.set(k, { mesh: m, type });
+      worldEdits.set(k, type);
+      if (!fromNet && State.mode === 'group') {
+        broadcastNet({ type: 'block', x: rx, y: ry, z: rz, block: type });
+      }
+    }
+
+    function delBlock(x, y, z, fromNet = false) {
+      if (!scene) return null;
+      const rx = Math.round(x), ry = Math.round(y), rz = Math.round(z);
+      const k = bKey(rx, ry, rz);
+      const item = blocks.get(k);
+      if (!item) return null;
+      scene.remove(item.mesh);
+      blocks.delete(k);
+      worldEdits.set(k, null);
+      if (!fromNet && State.mode === 'group') {
+        broadcastNet({ type: 'block', x: rx, y: ry, z: rz, block: null });
+      }
+      return item.type;
+    }
+
+    function clearWorld() {
+      if (!scene) return;
+      for (const [, v] of blocks) scene.remove(v.mesh);
+      blocks.clear();
+      for (const c of chests) scene.remove(c.mesh);
+      chests.length = 0;
+    }
+
+    function clearVehicles() {
+      if (!scene) return;
+      for (const v of parkedVehicles) scene.remove(v.mesh);
+      parkedVehicles.length = 0;
+    }
+
+    function clearLakeFishes() {
+      if (!scene) return;
+      for (const f of lakeFishes) scene.remove(f.mesh);
+      lakeFishes.length = 0;
+    }
+
+    function spawnGroundCoins() {
+      if (!scene) return;
+      for (const c of coinPickups) scene.remove(c.mesh);
+      coinPickups.length = 0;
+      const coinGeo = new THREE.CylinderGeometry(0.32, 0.32, 0.1, 14);
+      const coinMat = new THREE.MeshStandardMaterial({ color: 0xfacc15, emissive: 0xca8a04, emissiveIntensity: 0.45, metalness: 0.7, roughness: 0.2 });
+      const spots = [[-3, 9], [2, 9], [8, 8], [-8, 8], [-12, 12], [6, 13], [-5, 15], [10, 5], [-10, 5], [0, 14]];
+      spots.forEach(([cx, cz]) => {
+        const m = new THREE.Mesh(coinGeo, coinMat);
+        m.rotation.x = Math.PI / 2;
+        m.position.set(cx, terrainY(cx, cz) + 0.85, cz);
+        scene.add(m);
+        coinPickups.push({ mesh: m, x: cx, z: cz, value: 10 });
+      });
+    }
+
+    function stepCoinPickups() {
+      if (!playerPos) return;
+      for (let i = coinPickups.length - 1; i >= 0; i--) {
+        const c = coinPickups[i];
+        c.mesh.rotation.z += 0.05;
+        if (Math.hypot(playerPos.x - c.x, playerPos.z - c.z) < 1.55) {
+          State.coins += c.value;
+          SFX.pop(660, 980, 0.12);
+          scene.remove(c.mesh);
+          coinPickups.splice(i, 1);
+          updateHud();
+        }
+      }
+    }
+
+    function spawnVehicle3D(id, x, z, colorHex, labelText) {
+      if (!scene) return;
+      const y = terrainY(x, z) + (id === 'boat' ? 0.72 : 0.55);
+      const grp = new THREE.Group();
+      const bodyMat = new THREE.MeshStandardMaterial({ color: colorHex, metalness: id === 'boat' ? 0.1 : 0.45, roughness: id === 'boat' ? 0.78 : 0.32 });
+      const glassMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.15 });
+      const wheelMat = new THREE.MeshStandardMaterial({ color: 0x090d16, roughness: 0.85 });
+
+      if (id === 'boat') {
+        const hull = new THREE.Mesh(new THREE.BoxGeometry(1.45, 0.42, 2.55), bodyMat);
+        hull.position.y = 0.24;
+        const seat = new THREE.Mesh(new THREE.BoxGeometry(1.25, 0.12, 0.42), new THREE.MeshStandardMaterial({ color: 0xd97706 }));
+        seat.position.set(0, 0.45, 0);
+        const oarL = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.08, 1.4), new THREE.MeshStandardMaterial({ color: 0xfde68a }));
+        oarL.position.set(-0.85, 0.42, 0); oarL.rotation.y = 0.45;
+        const oarR = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.08, 1.4), new THREE.MeshStandardMaterial({ color: 0xfde68a }));
+        oarR.position.set(0.85, 0.42, 0); oarR.rotation.y = -0.45;
+        grp.add(hull, seat, oarL, oarR);
+      } else if (id === 'moto' || id === 'bike') {
+        const frame = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.48, 1.55), bodyMat);
+        frame.position.y = 0.48;
+        const w1 = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.32, 0.18, 12), wheelMat);
+        w1.rotation.z = Math.PI / 2; w1.position.set(0, 0.32, 0.55);
+        const w2 = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.32, 0.18, 12), wheelMat);
+        w2.rotation.z = Math.PI / 2; w2.position.set(0, 0.32, -0.55);
+        grp.add(frame, w1, w2);
+      } else {
+        const chassis = new THREE.Mesh(new THREE.BoxGeometry(1.55, 0.56, 2.75), bodyMat);
+        chassis.position.y = 0.52;
+        const cabin = new THREE.Mesh(new THREE.BoxGeometry(1.36, 0.52, 1.45), glassMat);
+        cabin.position.set(0, 1.02, -0.1);
+        grp.add(chassis, cabin);
+        if (id === 'police_car') {
+          const lightRed = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.14, 0.2), new THREE.MeshStandardMaterial({ color: 0xef4444, emissive: 0xef4444, emissiveIntensity: 0.8 }));
+          lightRed.position.set(-0.28, 1.34, -0.1);
+          const lightBlue = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.14, 0.2), new THREE.MeshStandardMaterial({ color: 0x3b82f6, emissive: 0x3b82f6, emissiveIntensity: 0.8 }));
+          lightBlue.position.set(0.28, 1.34, -0.1);
+          grp.add(lightRed, lightBlue);
+        }
+        [[-0.75, 0.85], [0.75, 0.85], [-0.75, -0.85], [0.75, -0.85]].forEach(([wx, wz]) => {
+          const w = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.32, 0.22, 12), wheelMat);
+          w.rotation.z = Math.PI / 2;
+          w.position.set(wx, 0.32, wz);
+          grp.add(w);
+        });
+      }
+      if (labelText) {
+        const tag = createNameTag(labelText, 'rgba(15,23,42,0.85)', '#fbbf24');
+        tag.position.y = 1.85;
+        grp.add(tag);
+      }
+      grp.position.set(x, y, z);
+      scene.add(grp);
+      parkedVehicles.push({ id, mesh: grp, x, z });
+    }
+
+    function spawnLakeFishesAndBoat() {
+      clearLakeFishes();
+      if (!scene) return;
+      spawnVehicle3D('boat', 11, 12, 0x92400e, '');
+
+      const fishColors = [0x38bdf8, 0xf97316, 0xfacc15, 0x34d399, 0xf43f5e, 0xa855f7];
+      for (let i = 0; i < 8; i++) {
+        const fGrp = new THREE.Group();
+        const col = fishColors[i % fishColors.length];
+        const fMat = new THREE.MeshStandardMaterial({ color: col, roughness: 0.35 });
+        const fBody = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.22, 0.56), fMat);
+        const fTail = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.26, 0.22), fMat);
+        fTail.position.set(0, 0, -0.36);
+        fGrp.add(fBody, fTail);
+        const ang = (i / 8) * Math.PI * 2;
+        const rad = 1.6 + (i % 3) * 1.3;
+        const fx = 16 + Math.cos(ang) * rad;
+        const fz = 12 + Math.sin(ang) * rad;
+        fGrp.position.set(fx, 0.65, fz);
+        scene.add(fGrp);
+        lakeFishes.push({ mesh: fGrp, tail: fTail, angle: ang, radius: rad, speed: 0.65 + (i % 3) * 0.22 });
+      }
+    }
+
+    function buildWorld() {
+      if (!scene || !boxGeo) return;
+      clearWorld();
+      clearVehicles();
+      spawnGroundCoins();
+      spawnLakeFishesAndBoat();
+      const HALF = 34;
+
+      for (let x = -HALF; x <= HALF; x++) {
+        for (let z = -HALF; z <= HALF; z++) {
+          const topY = terrainY(x, z);
+
+          if (isLakeCoord(x, z)) {
+            setBlock(x, -1, z, 'stone', true);
+            setBlock(x, 0, z, 'water', true);
+            setBlock(x, 1, z, 'water', true);
+            continue;
+          }
+
+          if (Math.abs(x) <= 22 && z >= 9 && z <= 11) {
+            setBlock(x, topY, z, 'asphalt', true);
+            setBlock(x, topY - 1, z, 'dirt', true);
+            continue;
+          }
+          if (Math.abs(x) <= 22 && (z === 8 || z === 12)) {
+            setBlock(x, topY, z, 'sidewalk', true);
+            setBlock(x, topY - 1, z, 'dirt', true);
+            continue;
+          }
+
+          const topType = isCaveEntrance(x, z) ? 'stone' : 'grass';
+          setBlock(x, topY, z, topType, true);
+          setBlock(x, topY - 1, z, 'dirt', true);
+          setBlock(x, topY - 2, z, 'dirt', true);
+
+          const caveFloorY = -4;
+          setBlock(x, caveFloorY, z, 'stone', true);
+          for (let y = caveFloorY + 1; y <= topY - 3; y++) {
+            const h = Math.abs(Math.sin(x * 12.9898 + y * 78.233 + z * 37.719) * 43758.5453) % 1;
+            if (isCaveEntrance(x, z) && y >= -2) continue;
+            if (y <= -1 && h > 0.90) setBlock(x, y, z, 'diamond', true);
+            else if (y <= 0 && h > 0.80) setBlock(x, y, z, 'gold', true);
+            else if (h > 0.65) setBlock(x, y, z, 'iron', true);
+            else if (h > 0.50) setBlock(x, y, z, 'coal', true);
+            else setBlock(x, y, z, 'stone', true);
+          }
+        }
+      }
+
+      const hospX = 14, hospZ = 4, hospY = terrainY(hospX, hospZ);
+      for (let x = hospX - 4; x <= hospX + 4; x++) {
+        for (let z = hospZ - 3; z <= hospZ + 3; z++) {
+          setBlock(x, hospY, z, 'tiles', true);
+          const isEdge = (x === hospX - 4 || x === hospX + 4 || z === hospZ - 3 || z === hospZ + 3);
+          const isDoor = (z === hospZ + 3 && Math.abs(x - hospX) <= 1);
+          if (isEdge && !isDoor) {
+            setBlock(x, hospY + 1, z, x === hospX - 4 ? 'hospital_green' : 'hospital_wall', true);
+            setBlock(x, hospY + 2, z, x === hospX - 4 ? 'hospital_green' : 'hospital_wall', true);
+            setBlock(x, hospY + 3, z, 'hospital_wall', true);
+          }
+          setBlock(x, hospY + 4, z, 'hospital_wall', true);
+        }
+      }
+      setBlock(hospX - 2, hospY + 1, hospZ - 2, 'bed', true);
+      setBlock(hospX + 2, hospY + 1, hospZ - 2, 'bed', true);
+      setBlock(hospX - 2, hospY + 1, hospZ + 1, 'bed', true);
+      setBlock(hospX + 2, hospY + 1, hospZ + 1, 'bed', true);
+      addBuildingSign('🏥 SPITALI', '#dc2626', '#ffffff', hospX, hospY + 3.8, hospZ + 3.6);
+
+      const restX = -14, restZ = 4, restY = terrainY(restX, restZ);
+      for (let x = restX - 5; x <= restX + 5; x++) {
+        for (let z = restZ - 4; z <= restZ + 3; z++) {
+          setBlock(x, restY, z, 'tiles', true);
+          const isEdge = (x === restX - 5 || x === restX + 5 || z === restZ - 4 || z === restZ + 3);
+          const isDoor = (z === restZ + 3 && Math.abs(x - restX) <= 1);
+          if (isEdge && !isDoor) {
+            setBlock(x, restY + 1, z, 'vento_wall', true);
+            setBlock(x, restY + 2, z, 'vento_wall', true);
+            setBlock(x, restY + 3, z, 'vento_dark', true);
+          }
+          setBlock(x, restY + 4, z, 'vento_dark', true);
+        }
+      }
+      setBlock(restX - 3, restY + 1, restZ - 2, 'table', true);
+      setBlock(restX - 4, restY + 1, restZ - 2, 'chair', true);
+      setBlock(restX - 2, restY + 1, restZ - 2, 'chair', true);
+      setBlock(restX + 3, restY + 1, restZ - 2, 'table', true);
+      setBlock(restX + 4, restY + 1, restZ - 2, 'chair', true);
+      setBlock(restX + 2, restY + 1, restZ - 2, 'chair', true);
+      setBlock(restX - 3, restY + 1, restZ + 1, 'table', true);
+      setBlock(restX - 4, restY + 1, restZ + 1, 'chair', true);
+      setBlock(restX + 3, restY + 1, restZ + 1, 'table', true);
+      setBlock(restX + 4, restY + 1, restZ + 1, 'chair', true);
+      setBlock(restX - 1, restY + 1, restZ - 3, 'furnace', true);
+      setBlock(restX,     restY + 1, restZ - 3, 'table', true);
+      setBlock(restX + 1, restY + 1, restZ - 3, 'furnace', true);
+      addBuildingSign('🍕 RESTORANT', '#1c1917', '#fbbf24', restX, restY + 3.8, restZ + 3.6);
+
+      const shopX = 0, shopZ = 3, shopY = terrainY(shopX, shopZ);
+      for (let x = shopX - 4; x <= shopX + 4; x++) {
+        for (let z = shopZ - 3; z <= shopZ + 3; z++) {
+          setBlock(x, shopY, z, 'tiles', true);
+          const isEdge = (x === shopX - 4 || x === shopX + 4 || z === shopZ - 3 || z === shopZ + 3);
+          const isDoor = (z === shopZ + 3 && Math.abs(x - shopX) <= 1);
+          if (isEdge && !isDoor) {
+            setBlock(x, shopY + 1, z, 'gold', true);
+            setBlock(x, shopY + 2, z, 'wood', true);
+            setBlock(x, shopY + 3, z, 'wood', true);
+          }
+          setBlock(x, shopY + 4, z, 'gold', true);
+        }
+      }
+      setBlock(shopX - 2, shopY + 1, shopZ - 2, 'table', true);
+      setBlock(shopX,     shopY + 1, shopZ - 2, 'table', true);
+      setBlock(shopX + 2, shopY + 1, shopZ - 2, 'table', true);
+      addBuildingSign('🏪 DYQANI', '#065f46', '#fde047', shopX, shopY + 3.8, shopZ + 3.6);
+
+      const treeSpots = [[-6, -4], [6, -4], [-11, 15], [5, 16], [13, -11], [-21, -7]];
+      treeSpots.forEach(([tx, tz]) => {
+        const by = terrainY(tx, tz);
+        for (let h = 1; h <= 6; h++) setBlock(tx, by + h, tz, 'wood', true);
+        for (let lx = -2; lx <= 2; lx++) {
+          for (let lz = -2; lz <= 2; lz++) {
+            if (Math.abs(lx) + Math.abs(lz) <= 3) setBlock(tx + lx, by + 5, tz + lz, 'leaves', true);
+            if (Math.abs(lx) <= 1 && Math.abs(lz) <= 1) setBlock(tx + lx, by + 6, tz + lz, 'leaves', true);
+          }
+        }
+        setBlock(tx, by + 7, tz, 'leaves', true);
+      });
+
+      spawnVehicle3D('police_car', 6, 10, 0x1d4ed8, '🚓 Policia');
+      spawnVehicle3D('car', -4, 10, 0xef4444, '');
+      spawnVehicle3D('sport_car', 11, 10, 0xfacc15, '');
+      spawnVehicle3D('moto', -9, 10, 0xf97316, '');
+
+      const crateDefs = [
+        { x: 3,   z: 14,  kind: 'yellow', color: 0xfacc15 },
+        { x: -4,  z: 14,  kind: 'armory', color: 0x38bdf8 },
+        { x: 8,   z: -3,  kind: 'supply', color: 0xf97316 },
+        { x: -18, z: -16, kind: 'relic',  color: 0xc084fc }
+      ];
+
+      crateDefs.forEach(c => {
+        const y = terrainY(c.x, c.z) + 0.92;
+        const grp = new THREE.Group();
+        const box = new THREE.Mesh(
+          new THREE.BoxGeometry(0.86, 0.86, 0.86),
+          new THREE.MeshStandardMaterial({ color: c.color, roughness: 0.35, metalness: 0.25 })
+        );
+        const trim = new THREE.Mesh(
+          new THREE.BoxGeometry(0.9, 0.14, 0.9),
+          new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.5 })
+        );
+        grp.add(box, trim);
+        grp.position.set(c.x, y, c.z);
+        scene.add(grp);
+        chests.push({ mesh: grp, hitMeshes: [box, trim], kind: c.kind, origin: new THREE.Vector3(c.x, y, c.z), active: true, respawnAt: 0 });
+      });
+
+      for (const [k, bType] of worldEdits.entries()) {
+        const [ex, ey, ez] = k.split(',').map(Number);
+        if (bType === null) delBlock(ex, ey, ez, true);
+        else setBlock(ex, ey, ez, bType, true);
+      }
+    }
+
+    function resetSavedWorld() {
+      try { localStorage.removeItem(SAVE_KEY); } catch (e) {}
+      worldEdits.clear();
+      State.level = 1; State.waveKills = 0; State.waveGoal = 5; State.hp = 20; State.kills = 0; State.coins = 0;
+      State.combatUnlocked = false;
+      State.swordPower = 100; State.gaUntil = 0; State.ridingVehicle = null;
+      State.bag = { dirt: 4, stone: 2, wood: 3, coal: 0, iron: 0, gold: 0, diamond: 0, raw_meat: 0, apple: 0, fruit: 0, fish: 0 };
+      State.hotbar = [
+        { id: 'fishing_rod', count: 1 }, { id: null, count: 0 }, { id: null, count: 0 },
+        { id: 'dirt', count: 4 }, { id: 'wood', count: 3 }, { id: 'stone', count: 2 },
+        { id: null, count: 0 }, { id: null, count: 0 }, { id: null, count: 0 }
+      ];
+      document.getElementById('save-banner').classList.add('hidden');
+      if (State.sceneReady) { buildWorld(); spawnMobsAndPlayers(); }
+      renderHotbar(); updateHud();
+    }
+
+    function createHpBar() {
+      const canvas = document.createElement('canvas');
+      canvas.width = 128; canvas.height = 20;
+      const ctx = canvas.getContext('2d');
+      const tex = new THREE.CanvasTexture(canvas);
+      const spr = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true }));
+      spr.scale.set(1.15, 0.18, 1);
+      spr.position.set(0, 2.08, 0);
+
+      function draw(hp, maxHp) {
+        const ratio = Math.max(0, Math.min(1, hp / Math.max(1, maxHp)));
+        ctx.clearRect(0, 0, 128, 20);
+        ctx.fillStyle = 'rgba(15,23,42,0.82)';
+        ctx.fillRect(0, 0, 128, 20);
+        ctx.fillStyle = ratio > 0.45 ? '#22c55e' : ratio > 0.2 ? '#facc15' : '#ef4444';
+        ctx.fillRect(4, 4, Math.round(120 * ratio), 12);
+        tex.needsUpdate = true;
+      }
+      draw(1, 1);
+      return { sprite: spr, draw };
+    }
+
+    function makeAnimal(cfg) {
+      const root = new THREE.Group();
+      const bodyMat = new THREE.MeshStandardMaterial({ color: cfg.body, roughness: 0.72 });
+      const headMat = new THREE.MeshStandardMaterial({ color: cfg.head || cfg.body, roughness: 0.68 });
+      const darkMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.5 });
+
+      const body = new THREE.Mesh(new THREE.BoxGeometry(0.62, 0.54, 1.12), bodyMat);
+      body.position.set(0, 0.68, 0);
+      root.add(body);
+
+      if (cfg.kind === 'tiger' || cfg.kind === 'leopard') {
+        for (let s = -0.35; s <= 0.35; s += 0.23) {
+          const stripe = new THREE.Mesh(new THREE.BoxGeometry(0.66, 0.34, 0.08), darkMat);
+          stripe.position.set(0, 0.72, s);
+          root.add(stripe);
+        }
+      }
+
+      const headGroup = new THREE.Group();
+      headGroup.position.set(0, 0.92, 0.66);
+      const head = new THREE.Mesh(new THREE.BoxGeometry(0.48, 0.44, 0.48), headMat);
+      const snout = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.2, 0.2), new THREE.MeshStandardMaterial({ color: 0xfde68a, roughness: 0.6 }));
+      snout.position.set(0, -0.06, 0.26);
+      const eyeL = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.08, 0.06), darkMat);
+      eyeL.position.set(-0.14, 0.06, 0.24);
+      const eyeR = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.08, 0.06), darkMat);
+      eyeR.position.set(0.14, 0.06, 0.24);
+      headGroup.add(head, snout, eyeL, eyeR);
+
+      if (cfg.kind === 'lion') {
+        const mane = new THREE.Mesh(new THREE.BoxGeometry(0.68, 0.66, 0.32), new THREE.MeshStandardMaterial({ color: 0x78350f, roughness: 0.85 }));
+        mane.position.set(0, 0.02, -0.05);
+        headGroup.add(mane);
+      }
+
+      const earL = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.14, 0.08), headMat);
+      earL.position.set(-0.18, 0.25, 0);
+      const earR = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.14, 0.08), headMat);
+      earR.position.set(0.18, 0.25, 0);
+      headGroup.add(earL, earR);
+      root.add(headGroup);
+
+      const tail = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.1, 0.52), headMat);
+      tail.position.set(0, 0.78, -0.72);
+      tail.rotation.x = 0.45;
+      root.add(tail);
+
+      const legGeo = new THREE.BoxGeometry(0.18, 0.44, 0.18);
+      const lLeg = new THREE.Mesh(legGeo, bodyMat); lLeg.position.set(-0.2, 0.22, 0.36);
+      const rLeg = new THREE.Mesh(legGeo, bodyMat); rLeg.position.set(0.2, 0.22, 0.36);
+      const bLLeg = new THREE.Mesh(legGeo, bodyMat); bLLeg.position.set(-0.2, 0.22, -0.36);
+      const bRLeg = new THREE.Mesh(legGeo, bodyMat); bRLeg.position.set(0.2, 0.22, -0.36);
+      root.add(lLeg, rLeg, bLLeg, bRLeg);
+
+      const hpBar = createHpBar();
+      hpBar.sprite.position.set(0, 1.55, 0);
+      root.add(hpBar.sprite);
+
+      root.userData.rig = { headGroup, lLeg, rLeg, bLLeg, bRLeg, hpBar, armorMat: bodyMat };
+      return root;
+    }
+
+    function makeDoll(cfg) {
+      const root = new THREE.Group();
+      const skinMat = new THREE.MeshStandardMaterial({ color: cfg.skin, roughness: 0.65 });
+      const armorMat = new THREE.MeshStandardMaterial({ color: cfg.armor, roughness: 0.45, metalness: 0.25 });
+      const accentMat = new THREE.MeshStandardMaterial({ color: cfg.accent, roughness: 0.4 });
+      const pantsMat = new THREE.MeshStandardMaterial({ color: cfg.pants, roughness: 0.75 });
+      const visorMat = new THREE.MeshStandardMaterial({ color: cfg.visor, emissive: cfg.visor, emissiveIntensity: 0.35 });
+
+      const torso = new THREE.Mesh(new THREE.BoxGeometry(0.68, 0.78, 0.36), armorMat);
+      torso.position.y = 1.02;
+      root.add(torso);
+
+      const headGroup = new THREE.Group();
+      headGroup.position.y = 1.66;
+      const head = new THREE.Mesh(new THREE.BoxGeometry(0.56, 0.56, 0.56), skinMat);
+      const visor = new THREE.Mesh(new THREE.BoxGeometry(0.58, 0.16, 0.1), visorMat);
+      visor.position.set(0, 0.04, 0.26);
+      headGroup.add(head, visor);
+      root.add(headGroup);
+
+      if (!cfg.zombie && !cfg.monkey) {
+        const cape = new THREE.Mesh(new THREE.BoxGeometry(0.62, 0.76, 0.07), accentMat);
+        cape.position.set(0, 1.02, -0.21);
+        cape.rotation.x = 0.14;
+        root.add(cape);
+      }
+
+      const lArm = new THREE.Group();
+      lArm.position.set(-0.48, 1.32, 0);
+      const lArmMesh = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.72, 0.24), cfg.zombie ? skinMat : armorMat);
+      lArmMesh.position.y = -0.3;
+      lArm.add(lArmMesh);
+
+      const rArm = new THREE.Group();
+      rArm.position.set(0.48, 1.32, 0);
+      const rArmMesh = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.72, 0.24), cfg.zombie ? skinMat : armorMat);
+      rArmMesh.position.y = -0.3;
+      rArm.add(rArmMesh);
+
+      if (cfg.zombie) {
+        lArm.rotation.x = -Math.PI / 2.2;
+        rArm.rotation.x = -Math.PI / 2.2;
+      } else if (!cfg.monkey) {
+        const blade = new THREE.Mesh(
+          new THREE.BoxGeometry(0.11, 0.06, 0.76),
+          new THREE.MeshStandardMaterial({ color: 0xe2e8f0, metalness: 0.6, roughness: 0.25 })
+        );
+        blade.position.set(0, -0.56, 0.64);
+        rArm.add(blade);
+      }
+
+      root.add(lArm, rArm);
+
+      const lLeg = new THREE.Group();
+      lLeg.position.set(-0.18, 0.64, 0);
+      const lLegMesh = new THREE.Mesh(new THREE.BoxGeometry(0.26, 0.64, 0.28), pantsMat);
+      lLegMesh.position.y = -0.32;
+      lLeg.add(lLegMesh);
+
+      const rLeg = new THREE.Group();
+      rLeg.position.set(0.18, 0.64, 0);
+      const rLegMesh = new THREE.Mesh(new THREE.BoxGeometry(0.26, 0.64, 0.28), pantsMat);
+      rLegMesh.position.y = -0.32;
+      rLeg.add(rLegMesh);
+
+      root.add(lLeg, rLeg);
+
+      const hpBar = createHpBar();
+      root.add(hpBar.sprite);
+
+      if (cfg.label) {
+        const tag = createNameTag(cfg.label, 'rgba(15,23,42,0.82)', '#38bdf8');
+        tag.position.set(0, 2.45, 0);
+        root.add(tag);
+      }
+
+      root.userData.rig = { headGroup, lArm, rArm, lLeg, rLeg, hpBar, armorMat };
+      return root;
+    }
+
+    function spawnMobsAndPlayers() {
+      if (!scene) return;
+      for (const m of mobs) scene.remove(m.mesh);
+      mobs.length = 0;
+
+      const lvScale = 1 + (State.level - 1) * 0.14;
+      const arenaMonsters = [
+        { kind: 'lion',        body: 0xd97706, head: 0xb45309, x: -7,  z: -8,  hp: 16, spd: 2.8, dmg: 1.5 },
+        { kind: 'tiger',       body: 0xf97316, head: 0xea580c, x: 9,   z: -8,  hp: 16, spd: 2.9, dmg: 1.5 },
+        { kind: 'dog',         body: 0x92400e, head: 0x78350f, x: -12, z: -4,  hp: 12, spd: 3.1, dmg: 1.0 },
+        { kind: 'leopard',     body: 0xfacc15, head: 0xca8a04, x: 11,  z: 14,  hp: 15, spd: 3.0, dmg: 1.5 },
+        { kind: 'food_animal', body: 0xf8fafc, head: 0xfdba74, x: -5,  z: 15,  hp: 10, spd: 1.7, dmg: 0 },
+        { kind: 'food_animal', body: 0x78350f, head: 0x92400e, x: 8,   z: 15,  hp: 10, spd: 1.7, dmg: 0 }
+      ];
+
+      arenaMonsters.forEach(p => {
+        const mesh = makeAnimal(p);
+        mesh.position.set(p.x, terrainY(p.x, p.z) + 0.5, p.z);
+        scene.add(mesh);
+        const maxHp = Math.round(p.hp * lvScale);
+        const mob = { mesh, kind: p.kind, dmg: p.dmg, hp: maxHp, maxHp, spd: p.spd, cd: 0, hurtCd: 0, slowUntil: 0, phase: Math.random() * 6, wanderAngle: Math.random() * Math.PI * 2, wanderTimer: 2 };
+        mesh.userData.rig.hpBar.draw(mob.hp, mob.maxHp);
+        mobs.push(mob);
+      });
+
+      [[-15, -11], [15, -4]].forEach(([x, z]) => {
+        const mesh = makeDoll({ skin: 0x65a30d, armor: 0x1e3a8a, accent: 0x4d7c0f, pants: 0x1e293b, visor: 0xef4444, zombie: true });
+        mesh.position.set(x, terrainY(x, z) + 0.5, z);
+        scene.add(mesh);
+        const maxHp = Math.round(16 * lvScale);
+        const mob = { mesh, kind: 'zombie', dmg: 1.5, hp: maxHp, maxHp, spd: 2.1, cd: 0, hurtCd: 0, slowUntil: 0, phase: Math.random() * 6, wanderAngle: Math.random() * Math.PI * 2, wanderTimer: 2 };
+        mesh.userData.rig.hpBar.draw(mob.hp, mob.maxHp);
+        mobs.push(mob);
+      });
+
+      [[-6, -4], [6, -4]].forEach(([tx, tz]) => {
+        const mesh = makeDoll({ skin: 0x92400e, armor: 0x78350f, accent: 0xd97706, pants: 0x451a03, visor: 0xfacc15, monkey: true });
+        mesh.scale.set(0.68, 0.68, 0.68);
+        const treeTopY = terrainY(tx, tz) + 6.5;
+        mesh.position.set(tx, treeTopY, tz);
+        scene.add(mesh);
+        const maxHp = Math.round(12 * lvScale);
+        const mob = { mesh, kind: 'monkey', dmg: 1.0, inTree: true, treeX: tx, treeY: treeTopY, treeZ: tz, hp: maxHp, maxHp, spd: 1.6, cd: 2.5, hurtCd: 0, slowUntil: 0, phase: Math.random() * 6 };
+        mesh.userData.rig.hpBar.draw(mob.hp, mob.maxHp);
+        mobs.push(mob);
+      });
+    }
+
+    function heldSlot() { return State.hotbar[State.slot] || null; }
+
+    function rebuildHandModel() {
+      if (!handItemGroup || typeof THREE === 'undefined') return;
+      while (handItemGroup.children.length > 0) handItemGroup.remove(handItemGroup.children[0]);
+      const s = heldSlot();
+      const def = s && s.id && s.count > 0 ? ITEMS[s.id] : null;
+      if (!def) return;
+
+      if (def.type === 'sword') {
+        const matMetal = new THREE.MeshStandardMaterial({ color: def.hex, metalness: 0.6, roughness: 0.25 });
+        const matGrip = new THREE.MeshStandardMaterial({ color: 0x451a03, roughness: 0.8 });
+        const grip = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.06, 0.16), matGrip);
+        const blade = new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.035, 0.56), matMetal);
+        blade.position.set(0, 0.01, -0.36);
+        handItemGroup.add(grip, blade);
+      } else if (def.type === 'rod') {
+        const rod = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.04, 0.72), new THREE.MeshStandardMaterial({ color: 0x92400e }));
+        rod.position.set(0, 0.04, -0.32);
+        rod.rotation.x = 0.22;
+        const line = new THREE.Mesh(new THREE.BoxGeometry(0.012, 0.36, 0.012), new THREE.MeshStandardMaterial({ color: 0xf8fafc }));
+        line.position.set(0, -0.06, -0.66);
+        handItemGroup.add(rod, line);
+      } else if (def.type === 'bow') {
+        const bowArc = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.56, 0.08), new THREE.MeshStandardMaterial({ color: 0x92400e }));
+        bowArc.position.set(0, 0.02, -0.32);
+        handItemGroup.add(bowArc);
+      } else {
+        const miniBlock = new THREE.Mesh(
+          new THREE.BoxGeometry(0.24, 0.24, 0.24),
+          Mats[def.block] || new THREE.MeshStandardMaterial({ color: def.hex })
+        );
+        miniBlock.position.set(0, 0.03, -0.26);
+        handItemGroup.add(miniBlock);
+      }
+    }
+
+    function swingHand() { handSwing = 1.0; }
+
+    function updateHandAnimation(dt, spdRatio) {
+      if (!handPivot) return;
+      if (handSwing > 0) handSwing = Math.max(0, handSwing - dt * 4.5);
+      const bob = Math.sin(performance.now() * 0.011) * 0.025 * spdRatio;
+      const swingRot = Math.sin(handSwing * Math.PI) * 1.15;
+      handPivot.position.set(0.34, -0.28 + bob, -0.45);
+      handPivot.rotation.set(-swingRot * 0.75, swingRot * 0.45, -swingRot * 0.35);
+    }
+
+    function giveItem(id, amt = 1) {
+      State.bag[id] = (State.bag[id] || 0) + amt;
+      if (ITEMS[id] && (ITEMS[id].type === 'sword' || ITEMS[id].type === 'bow')) {
+        State.combatUnlocked = true;
+      }
+      const existing = State.hotbar.find(x => x && x.id === id);
+      if (existing) {
+        existing.count += amt;
+      } else {
+        const emptyIdx = State.hotbar.findIndex(x => !x || !x.id || x.count <= 0);
+        if (emptyIdx >= 0) State.hotbar[emptyIdx] = { id, count: amt };
+      }
+      renderHotbar();
+      renderCraftUI();
+    }
+
+    function takeItem(id, amt = 1) {
+      if ((State.bag[id] || 0) < amt) return false;
+      State.bag[id] -= amt;
+      const slot = State.hotbar.find(x => x && x.id === id);
+      if (slot) {
+        slot.count -= amt;
+        if (slot.count <= 0) { slot.id = null; slot.count = 0; }
+      }
+      renderHotbar();
+      renderCraftUI();
+      return true;
+    }
+
+    function findTargetMob(dir) {
+      if (!playerPos) return null;
+      let best = null, bestScore = 0.65;
+      for (const m of mobs) {
+        const toMob = m.mesh.position.clone().sub(playerPos);
+        const dist = toMob.length();
+        if (dist > 4.6) continue;
+        toMob.normalize();
+        const dot = dir.dot(toMob);
+        if (dot > bestScore) { bestScore = dot; best = m; }
+      }
+      return best;
+    }
+
+    function flashMobRed(m) {
+      const rig = m.mesh.userData.rig;
+      if (!rig || !rig.armorMat) return;
+      const orig = rig.armorMat.emissive.getHex();
+      rig.armorMat.emissive.setHex(0xff2a55);
+      rig.armorMat.emissiveIntensity = 0.75;
+      setTimeout(() => {
+        if (rig && rig.armorMat) { rig.armorMat.emissive.setHex(orig); rig.armorMat.emissiveIntensity = 0.1; }
+      }, 150);
+    }
+
+    function advanceLevelIfReady() {
+      if (State.waveKills >= State.waveGoal) {
+        State.level += 1;
+        State.waveKills = 0;
+        State.waveGoal = 5 + (State.level - 1) * 2;
+        State.hp = Math.min(maxHpNow(), State.hp + 6);
+        State.swordPower = 100;
+        giveItem('gold_apple', 1);
+        giveItem('diamond', 1);
+        SFX.pop(520, 980, 0.22);
+        spawnMobsAndPlayers();
+        saveProgress();
+        updateHud();
+      }
+    }
+
+    function openCrate(c, now) {
+      c.active = false; c.mesh.visible = false; c.respawnAt = now + 35000;
+      SFX.pop(480, 860, 0.14);
+      if (c.kind === 'yellow') { giveItem('potion', 2); State.swordPower = 100; }
+      else if (c.kind === 'armory') { giveItem('pickaxe', 1); giveItem('axe', 1); }
+      else if (c.kind === 'supply') { giveItem('coal', 2); giveItem('water_bucket', 1); }
+      else { giveItem('gold_apple', 1); giveItem('ender_pearl', 2); }
+      saveProgress(); updateHud();
+    }
+
+    function primaryAction() {
+      if (!State.running || !camera || !playerPos) return;
+      SFX.init();
+      swingHand();
+
+      const charge = Math.max(0.35, 1.0 - State.attackCd);
+      State.attackCd = 0.45;
+      const s = heldSlot();
+      const def = s && s.id && s.count > 0 ? ITEMS[s.id] : null;
+      const dir = new THREE.Vector3(0, 0, -1).applyEuler(new THREE.Euler(pitch, yaw, 0, 'YXZ'));
+
+      const target = findTargetMob(dir);
+      if (target) {
+        const now = performance.now();
+        if (now < (target.hurtCd || 0)) return;
+        target.hurtCd = now + 350;
+        if (target.kind !== 'food_animal') State.combatUnlocked = true;
+
+        const isSword = def && def.type === 'sword';
+        if (isSword && State.swordPower <= 0) target.hp -= 2.0 * charge;
+        else {
+          if (isSword) { State.swordPower = Math.max(0, State.swordPower - 4); updateHud(); }
+          const dmg = isSword ? def.dmg * (0.75 + 0.25 * (State.swordPower / 100)) : 4.2;
+          target.hp -= dmg * charge;
+        }
+
+        SFX.entitySound(target.kind);
+        flashMobRed(target);
+
+        const kb = dir.clone(); kb.y = 0;
+        if (kb.lengthSq() > 0.001) kb.normalize().multiplyScalar(1.1 * charge);
+        target.mesh.position.x = Math.max(-25, Math.min(25, target.mesh.position.x + kb.x));
+        target.mesh.position.z = Math.max(-25, Math.min(25, target.mesh.position.z + kb.z));
+
+        const rig = target.mesh.userData.rig;
+        if (rig && rig.hpBar) rig.hpBar.draw(target.hp, target.maxHp);
+
+        if (target.hp <= 0) {
+          State.kills += 1;
+          State.waveKills += 1;
+          State.coins += 12;
+          SFX.pop(540, 920, 0.16);
+          if (target.kind === 'food_animal') giveItem('raw_meat', 2);
+          else { giveItem('raw_meat', 1); giveItem('gold', 1); }
+
+          target.hp = target.maxHp;
+          if (rig && rig.hpBar) rig.hpBar.draw(target.hp, target.maxHp);
+          if (target.inTree) {
+            target.mesh.position.set(target.treeX, target.treeY, target.treeZ);
+          } else {
+            const ang = Math.random() * Math.PI * 2;
+            const rx = Math.max(-23, Math.min(23, Math.round(Math.cos(ang) * 18)));
+            const rz = Math.max(-23, Math.min(23, Math.round(Math.sin(ang) * 18)));
+            target.mesh.position.set(rx, terrainY(rx, rz) + 0.5, rz);
+          }
+          advanceLevelIfReady(); saveProgress(); updateHud();
+        }
+        return;
+      }
+
+      const ray = new THREE.Raycaster(camera.position, dir, 0, 5.2);
+      for (const c of chests) {
+        if (!c.active) continue;
+        if (ray.intersectObjects(c.hitMeshes, true).length > 0) { openCrate(c, performance.now()); return; }
+      }
+
+      const blockMeshes = Array.from(blocks.values()).map(v => v.mesh);
+      const hits = ray.intersectObjects(blockMeshes, false);
+      if (hits.length > 0) {
+        const hitObj = hits[0].object;
+        const ud = hitObj.userData;
+        if (ud && ud.type !== 'water') {
+          const hitPower = (def && (def.type === 'tool' || def.type === 'axe')) ? 2 : 1;
+          ud.hitsLeft = (ud.hitsLeft || 2) - hitPower;
+          if (ud.hitsLeft > 0) {
+            const sc = 0.86 + 0.14 * (ud.hitsLeft / (ud.maxHits || 3));
+            hitObj.scale.set(sc, sc, sc);
+            SFX.pop(210, 290, 0.06);
+            return;
+          }
+          const removedType = delBlock(ud.gx, ud.gy, ud.gz);
+          SFX.pop(260, 420, 0.08);
+          if (removedType === 'leaves') {
+            giveItem(Math.random() > 0.45 ? 'apple' : 'fruit', 1);
+          } else if (removedType === 'wood') {
+            giveItem('wood', 1);
+          } else if (removedType === 'dirt' || removedType === 'grass') {
+            giveItem('dirt', 1);
+            if (Math.random() < 0.35) {
+              const digFinds = ['coal', 'iron', 'gold', 'apple'];
+              const bonus = digFinds[Math.floor(Math.random() * digFinds.length)];
+              giveItem(bonus, 1);
+              SFX.pop(540, 880, 0.12);
+            }
+          } else if (['stone', 'coal', 'iron', 'gold', 'diamond', 'furnace', 'asphalt', 'tiles', 'sidewalk', 'bed', 'table', 'chair'].includes(removedType)) {
+            giveItem(removedType, 1);
+            if (removedType === 'stone' && Math.random() < 0.42) {
+              const oreFinds = ['coal', 'iron', 'gold', 'diamond'];
+              const bonusOre = oreFinds[Math.floor(Math.random() * oreFinds.length)];
+              giveItem(bonusOre, 1);
+              SFX.pop(620, 960, 0.14);
+            }
+          }
+          saveProgress();
+        }
+      }
+    }
+
+    function collectNearbyPuddle(giveBackBucket = false) {
+      if (!playerPos) return false;
+      for (let i = puddles.length - 1; i >= 0; i--) {
+        const p = puddles[i];
+        if (Math.hypot(playerPos.x - p.x, playerPos.z - p.z) <= 3.6 && Math.abs(playerPos.y - p.y) <= 2.6) {
+          scene.remove(p.mesh);
+          puddles.splice(i, 1);
+          if (giveBackBucket) {
+            giveItem('water_bucket', 1);
+            saveProgress();
+          }
+          SFX.pop(360, 680, 0.14);
+          return true;
+        }
+      }
+      return false;
+    }
+
+    function secondaryAction() {
+      if (!State.running || !camera || !playerPos) return;
+      SFX.init();
+      swingHand();
+
+      if (State.ridingVehicle) {
+        State.ridingVehicle = null;
+        SFX.pop(320, 220, 0.12);
+        updateHud();
+        return;
+      }
+      for (const v of parkedVehicles) {
+        if (Math.hypot(playerPos.x - v.mesh.position.x, playerPos.z - v.mesh.position.z) < 2.8) {
+          State.ridingVehicle = v.id;
+          SFX.pop(420, 740, 0.15);
+          if (v.id === 'police_car') SFX.sirenPulse();
+          else if (v.id !== 'boat') SFX.horn();
+          updateHud();
+          return;
+        }
+      }
+
+      const s = heldSlot();
+      const def = s && s.id && s.count > 0 ? ITEMS[s.id] : null;
+      const dir = new THREE.Vector3(0, 0, -1).applyEuler(new THREE.Euler(pitch, yaw, 0, 'YXZ'));
+
+      if ((!def || def.type !== 'bucket') && collectNearbyPuddle(true)) {
+        updateHud();
+        return;
+      }
+
+      const nearLake = isLakeCoord(Math.round(playerPos.x), Math.round(playerPos.z)) || Math.hypot(playerPos.x - 16, playerPos.z - 12) < 9.5;
+      if ((def && def.type === 'rod') || (nearLake && (!def || def.type !== 'block'))) {
+        if (nearLake) {
+          giveItem('fish', 1);
+          SFX.pop(520, 880, 0.16);
+          updateHud();
+          return;
+        }
+      }
+
+      if (!def) return;
+
+      if (def.type === 'vehicle') {
+        const vx = Math.round(playerPos.x + dir.x * 2.5);
+        const vz = Math.round(playerPos.z + dir.z * 2.5);
+        if (takeItem(s.id, 1)) {
+          spawnVehicle3D(s.id, vx, vz, def.hex, s.id === 'police_car' ? '🚓 Policia' : '');
+          State.ridingVehicle = s.id;
+          SFX.pop(460, 780, 0.15);
+          updateHud();
+        }
+        return;
+      }
+
+      if (def.type === 'potion') {
+        if (takeItem('potion', 1)) { State.swordPower = 100; SFX.pop(420, 940, 0.16); updateHud(); }
+        return;
+      }
+
+      if (def.type === 'food') {
+        if (takeItem(s.id, 1)) {
+          if (State.hp >= maxHpNow() && (State.bonusHearts || 0) < 5) {
+            State.bonusHearts = (State.bonusHearts || 0) + 1;
+          }
+          State.hp = Math.min(maxHpNow(), State.hp + (def.heal || 3));
+          SFX.pop(460, 760, 0.14);
+          updateHud();
+        }
+        return;
+      }
+
+      if (def.type === 'gapple') {
+        if (takeItem('gold_apple', 1)) {
+          State.gaUntil = Date.now() + 180000;
+          State.hp = maxHpNow();
+          SFX.pop(520, 1040, 0.24);
+          updateHud();
+        }
+        return;
+      }
+
+      if (def.type === 'bucket') {
+        if (collectNearbyPuddle(false)) {
+          updateHud();
+          return;
+        }
+        const ray = new THREE.Raycaster(camera.position, dir, 0, 5.2);
+        const hits = ray.intersectObjects(Array.from(blocks.values()).map(v => v.mesh), false);
+        let px, pz, py;
+        if (hits.length > 0 && hits[0].face) {
+          const hitPt = hits[0].point.clone().addScaledVector(hits[0].face.normal, 0.12);
+          px = Math.round(hitPt.x);
+          pz = Math.round(hitPt.z);
+          py = hitPt.y + 0.08;
+        } else {
+          px = Math.round(playerPos.x + dir.x * 2.2);
+          pz = Math.round(playerPos.z + dir.z * 2.2);
+          py = getStandingFloorY(px, pz, playerPos.y) - 1.2;
+        }
+        if (takeItem('water_bucket', 1)) {
+          const disc = new THREE.Mesh(
+            new THREE.CylinderGeometry(2.6, 2.6, 0.16, 16),
+            new THREE.MeshStandardMaterial({ color: 0x0ea5e9, transparent: true, opacity: 0.72 })
+          );
+          disc.position.set(px, py, pz);
+          scene.add(disc);
+          puddles.push({ mesh: disc, x: px, z: pz, y: py, expiresAt: performance.now() + 90000 });
+          SFX.pop(320, 210, 0.18);
+          saveProgress();
+          updateHud();
+        }
+        return;
+      }
+
+      if (def.type === 'pearl') {
+        if (takeItem('ender_pearl', 1)) {
+          const orb = new THREE.Mesh(
+            new THREE.SphereGeometry(0.2, 12, 12),
+            new THREE.MeshStandardMaterial({ color: 0xc084fc, emissive: 0xa855f7, emissiveIntensity: 0.6 })
+          );
+          orb.position.copy(camera.position).addScaledVector(dir, 1.0);
+          scene.add(orb);
+          pearls.push({ mesh: orb, vel: dir.clone().multiplyScalar(22).add(new THREE.Vector3(0, 4.5, 0)), bornAt: performance.now() });
+          SFX.pop(640, 960, 0.12);
+        }
+        return;
+      }
+
+      if (def.type === 'tnt') {
+        if (takeItem('tnt', 1)) {
+          const tx = Math.round(playerPos.x + dir.x * 2.5);
+          const tz = Math.round(playerPos.z + dir.z * 2.5);
+          const ty = terrainY(tx, tz) + 1;
+          setBlock(tx, ty, tz, 'tnt');
+          setTimeout(() => {
+            delBlock(tx, ty, tz);
+            SFX.boom();
+            for (const m of mobs) {
+              if (m.mesh.position.distanceTo(new THREE.Vector3(tx, ty, tz)) < 6.5) {
+                m.hp -= 16;
+                flashMobRed(m);
+                const rig = m.mesh.userData.rig;
+                if (rig && rig.hpBar) rig.hpBar.draw(m.hp, m.maxHp);
+              }
+            }
+          }, 900);
+        }
+        return;
+      }
+
+      if (def.type === 'block') {
+        const ray = new THREE.Raycaster(camera.position, dir, 0, 5.2);
+        const hits = ray.intersectObjects(Array.from(blocks.values()).map(v => v.mesh), false);
+        let bx, by, bz;
+        if (hits.length > 0 && hits[0].face) {
+          const p = hits[0].point.clone().addScaledVector(hits[0].face.normal, 0.52);
+          bx = Math.round(p.x); by = Math.round(p.y); bz = Math.round(p.z);
+        } else {
+          bx = Math.round(playerPos.x + dir.x * 2.4);
+          by = Math.round(terrainY(Math.round(playerPos.x + dir.x * 2.4), Math.round(playerPos.z + dir.z * 2.4)) + 1);
+          bz = Math.round(playerPos.z + dir.z * 2.4);
+        }
+        if (takeItem(s.id, 1)) {
+          setBlock(bx, by, bz, def.block);
+          SFX.pop(360, 520, 0.08);
+          saveProgress();
+        }
+      }
+    }
+
+    function hurtPlayer(dmg, kind = 'player', bypassCombatLock = false) {
+      if (!State.running || (!State.combatUnlocked && !bypassCombatLock)) return;
+      const now = performance.now();
+      if (now - State.lastHurtAt < 750) return;
+      State.lastHurtAt = now;
+      State.lastCombatAt = now;
+
+      State.hp = Math.max(0, State.hp - dmg);
+      SFX.entitySound(kind);
+      updateHud();
+
+      const vig = document.getElementById('hurt-vignette');
+      vig.style.opacity = '1';
+      setTimeout(() => { vig.style.opacity = '0'; }, 160);
+
+      if (State.hp <= 0) {
+        State.running = false;
+        saveProgress();
+        try { if (document.pointerLockElement) document.exitPointerLock(); } catch (e) {}
+        document.getElementById('crosshair').classList.add('hidden');
+        document.getElementById('touch-ui').classList.add('hidden');
+        document.getElementById('go-stats').textContent = L().goStats(State.kills, State.level);
+        document.getElementById('gameover-modal').classList.remove('hidden');
+        document.getElementById('gameover-modal').classList.add('flex');
+      }
+    }
+
+    function respawnPlayer() {
+      document.getElementById('gameover-modal').classList.add('hidden');
+      document.getElementById('gameover-modal').classList.remove('flex');
+      State.hp = maxHpNow();
+      State.swordPower = 100;
+      if (playerPos && playerVel) { playerPos.set(0, terrainY(0, 12) + 1.8, 12); playerVel.set(0, 0, 0); }
+      State.running = true;
+      updateHud();
+      if (!isTouchDevice()) requestLock();
+      else document.getElementById('touch-ui').classList.remove('hidden');
+      document.getElementById('crosshair').classList.remove('hidden');
+    }
+
+    function backToMenuFromGameOver() {
+      document.getElementById('gameover-modal').classList.add('hidden');
+      document.getElementById('gameover-modal').classList.remove('flex');
+      openLobby();
+    }
+
+    function craftRecipe(id) {
+      SFX.init();
+      let ok = false, amt = 1;
+      if (id === 'fishing_rod') ok = takeItem('wood', 2);
+      else if (id === 'boat') ok = takeItem('wood', 3);
+      else if (id === 'pickaxe') ok = takeItem('stone', 2) || takeItem('iron', 2);
+      else if (id === 'axe') ok = takeItem('stone', 2) || takeItem('wood', 2);
+      else if (id === 'bow') ok = takeItem('wood', 2) && takeItem('iron', 1);
+      else if (id === 'stone_sword') { ok = takeItem('stone', 3); if (ok) State.swordPower = 100; }
+      else if (id === 'iron_sword') { ok = takeItem('iron', 2); if (ok) State.swordPower = 100; }
+      else if (id === 'gold_sword') { ok = takeItem('gold', 2); if (ok) State.swordPower = 100; }
+      else if (id === 'diamond_sword') { ok = takeItem('diamond', 2); if (ok) State.swordPower = 100; }
+      else if (id === 'asphalt') { ok = takeItem('stone', 2) && takeItem('coal', 1); amt = 4; }
+      else if (id === 'tiles') { ok = takeItem('stone', 2); amt = 4; }
+      else if (id === 'sidewalk') { ok = takeItem('stone', 2) && takeItem('dirt', 1); amt = 4; }
+      else if (id === 'bed') ok = takeItem('wood', 2) && takeItem('dirt', 1);
+      else if (id === 'table') ok = takeItem('wood', 2);
+      else if (id === 'chair') ok = takeItem('wood', 1);
+      else if (id === 'bike') ok = takeItem('iron', 2);
+      else if (id === 'moto') ok = takeItem('iron', 3) && takeItem('coal', 1);
+      else if (id === 'car') ok = takeItem('iron', 4) && takeItem('gold', 1);
+      else if (id === 'tnt') { ok = takeItem('coal', 2) && (takeItem('dirt', 2) || takeItem('stone', 2)); amt = 2; }
+      else if (id === 'furnace') ok = takeItem('stone', 4);
+      else if (id === 'water_bucket') ok = takeItem('iron', 2);
+      else if (id === 'gold_apple') ok = takeItem('gold', 2);
+
+      if (ok) {
+        giveItem(id, amt);
+        SFX.pop(460, 820, 0.14);
+        saveProgress();
+        updateHud();
+      }
+    }
+
+    function smeltMeat() {
+      SFX.init();
+      if (takeItem('coal', 1) && (takeItem('raw_meat', 1) || takeItem('fish', 1))) {
+        giveItem('cooked_meat', 1);
+        SFX.pop(520, 880, 0.16);
+        saveProgress();
+      }
+    }
+
+    const SHOP_CATALOG = [
+      { id: 'fishing_rod',   price: 10, label: '🎣 Kallam Peshkimi' },
+      { id: 'boat',          price: 18, label: '🚣 Varkë Liqeni' },
+      { id: 'wooden_sword',  price: 15, label: '🗡️ Shpatë Druri' },
+      { id: 'stone_sword',   price: 28, label: '⚔️ Shpatë Guri' },
+      { id: 'iron_sword',    price: 45, label: '🗡️ Shpatë Hekuri' },
+      { id: 'bow',           price: 35, label: '🏹 Hark & Shigjetë' },
+      { id: 'cooked_meat',   price: 10, label: '🍖 Ushqim (+3❤️)' },
+      { id: 'car',           price: 55, label: '🚗 Makinë e Kuqe' },
+      { id: 'police_car',    price: 75, label: '🚓 Makinë Policie (Sirena)' },
+      { id: 'sport_car',     price: 95, label: '🏎️ Makinë Sportive' },
+      { id: 'taxi_car',      price: 50, label: '🚕 Taksi' },
+      { id: 'suv_car',       price: 65, label: '🚙 Xhip SUV' },
+      { id: 'moto',          price: 40, label: '🏍️ Motorr' },
+      { id: 'bike',          price: 22, label: '🚲 Biçikletë' }
+    ];
+
+    function buyShopItem(id, price) {
+      SFX.init();
+      if ((State.coins || 0) < price) return;
+      State.coins -= price;
+      giveItem(id, 1);
+      SFX.pop(540, 920, 0.14);
+      saveProgress();
+      renderCraftUI();
+      updateHud();
+    }
+
+    function sellAllProduce() {
+      SFX.init();
+      let earned = 0;
+      const rates = { apple: 6, fruit: 7, fish: 10, raw_meat: 8, cooked_meat: 14, coal: 6, iron: 12, gold: 22, diamond: 40 };
+      Object.entries(rates).forEach(([k, rate]) => {
+        const cnt = State.bag[k] || 0;
+        if (cnt > 0 && takeItem(k, cnt)) earned += cnt * rate;
+      });
+      if (earned > 0) {
+        State.coins += earned;
+        SFX.pop(620, 980, 0.16);
+        saveProgress();
+        renderCraftUI();
+        updateHud();
+      }
+    }
+
+    function toggleShopModal(open) {
+      toggleCraftModal(open);
+      if (open) switchCraftTab('shop');
+    }
+
+    function toggleCraftModal(open) {
+      const el = document.getElementById('craft-modal');
+      if (open) {
+        try { if (document.pointerLockElement) document.exitPointerLock(); } catch (e) {}
+        renderCraftUI();
+        el.classList.remove('hidden');
+        el.classList.add('flex');
+      } else {
+        el.classList.add('hidden');
+        el.classList.remove('flex');
+        if (State.running && !isTouchDevice()) requestLock();
+      }
+    }
+
+    function switchCraftTab(tab) {
+      const bC = document.getElementById('tab-btn-craft');
+      const bF = document.getElementById('tab-btn-furnace');
+      const bS = document.getElementById('tab-btn-shop');
+      const pC = document.getElementById('craft-pane-craft');
+      const pF = document.getElementById('craft-pane-furnace');
+      const pS = document.getElementById('craft-pane-shop');
+      [bC, bF, bS].forEach(b => { if (b) b.className = 'px-3 py-1.5 rounded-xl text-xs font-black bg-slate-800 text-slate-200 cursor-pointer'; });
+      [pC, pF, pS].forEach(p => { if (p) p.classList.add('hidden'); });
+      if (tab === 'craft') {
+        bC.className = 'px-3 py-1.5 rounded-xl text-xs font-black bg-amber-400 text-slate-950 cursor-pointer';
+        pC.classList.remove('hidden');
+      } else if (tab === 'furnace') {
+        bF.className = 'px-3 py-1.5 rounded-xl text-xs font-black bg-amber-400 text-slate-950 cursor-pointer';
+        pF.classList.remove('hidden');
+      } else {
+        bS.className = 'px-3 py-1.5 rounded-xl text-xs font-black bg-emerald-400 text-slate-950 cursor-pointer';
+        pS.classList.remove('hidden');
+      }
+    }
+
+    function renderCraftUI() {
+      const d = L();
+      const sum = document.getElementById('bag-summary');
+      if (sum) {
+        const keys = ['wood', 'stone', 'coal', 'iron', 'gold', 'diamond', 'apple', 'fruit', 'fish', 'raw_meat', 'cooked_meat'];
+        sum.innerHTML = keys.map(k =>
+          `<span class="px-2 py-0.5 rounded-md bg-slate-900 border border-slate-700">${d.items[k] || k}: <b>${State.bag[k] || 0}</b></span>`
+        ).join('');
+      }
+      const pane = document.getElementById('craft-pane-craft');
+      if (pane) {
+        pane.innerHTML = d.recipes.map(r =>
+          `<div class="p-2.5 rounded-xl bg-slate-900/90 border border-slate-700/80 flex items-center justify-between gap-2">
+            <div>
+              <div class="text-xs font-black text-white">${r.title}</div>
+              <div class="text-[10px] text-slate-400 font-semibold">${r.req}</div>
+            </div>
+            <button type="button" onclick="craftRecipe('${r.id}')" class="mc-btn px-2.5 py-1.5 rounded-lg text-[11px] font-black text-emerald-300 cursor-pointer">${r.btn}</button>
+          </div>`
+        ).join('');
+      }
+      const shopBal = document.getElementById('shop-balance-lbl');
+      if (shopBal) shopBal.textContent = `Monedha: ${State.coins || 0} 🪙`;
+      const shopList = document.getElementById('shop-items-list');
+      if (shopList) {
+        shopList.innerHTML = SHOP_CATALOG.map(s =>
+          `<div class="p-2.5 rounded-xl bg-slate-900/90 border border-slate-700/80 flex items-center justify-between gap-2">
+            <div>
+              <div class="text-xs font-black text-white">${s.label}</div>
+              <div class="text-[10px] text-amber-300 font-bold">${s.price} 🪙</div>
+            </div>
+            <button type="button" onclick="buyShopItem('${s.id}', ${s.price})" class="mc-btn px-2.5 py-1.5 rounded-lg text-[11px] font-black text-emerald-300 cursor-pointer">Bli</button>
+          </div>`
+        ).join('');
+      }
+    }
+
+    function pickMode(m) {
+      State.mode = m;
+      const bs = document.getElementById('btn-mode-solo');
+      const bg = document.getElementById('btn-mode-group');
+      const gp = document.getElementById('group-panel');
+      if (m === 'solo') {
+        bs.className = 'p-2 rounded-xl border-2 border-emerald-400 bg-emerald-500/15 text-left cursor-pointer';
+        bg.className = 'p-2 rounded-xl border-2 border-slate-700 bg-slate-900/80 text-left cursor-pointer';
+        gp.classList.add('hidden');
+      } else {
+        bg.className = 'p-2 rounded-xl border-2 border-sky-400 bg-sky-500/15 text-left cursor-pointer';
+        bs.className = 'p-2 rounded-xl border-2 border-slate-700 bg-slate-900/80 text-left cursor-pointer';
+        gp.classList.remove('hidden');
+        if (!document.getElementById('input-code').value.trim()) genCode();
+        refreshGroupStatus();
+      }
+      updateHud();
+    }
+
+    function setGroupRole(role) {
+      State.groupRole = role;
+      const bh = document.getElementById('ui-host-btn');
+      const bj = document.getElementById('ui-join-btn');
+      if (role === 'host') {
+        bh.className = 'px-2 py-1 rounded-lg text-[10px] font-black bg-sky-400 text-slate-950 cursor-pointer';
+        bj.className = 'px-2 py-1 rounded-lg text-[10px] font-bold bg-slate-800 text-slate-200 cursor-pointer';
+      } else {
+        bj.className = 'px-2 py-1 rounded-lg text-[10px] font-black bg-sky-400 text-slate-950 cursor-pointer';
+        bh.className = 'px-2 py-1 rounded-lg text-[10px] font-bold bg-slate-800 text-slate-200 cursor-pointer';
+      }
+      refreshGroupStatus();
+    }
+
+    function genCode() {
+      const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+      let c = '';
+      for (let i = 0; i < 5; i++) c += chars[Math.floor(Math.random() * chars.length)];
+      State.code = c;
+      document.getElementById('input-code').value = c;
+      refreshGroupStatus();
+    }
+
+    function copyCode() {
+      const el = document.getElementById('input-code');
+      el.select();
+      try { document.execCommand('copy'); } catch (e) {}
+    }
+
+    function openLobby() {
+      saveProgress();
+      State.running = false;
+      try { if (document.pointerLockElement) document.exitPointerLock(); } catch (e) {}
+      document.getElementById('lobby-modal').classList.remove('hidden');
+      document.getElementById('crosshair').classList.add('hidden');
+      document.getElementById('touch-ui').classList.add('hidden');
+      const sb = document.getElementById('save-banner');
+      sb.classList.remove('hidden');
+      document.getElementById('save-banner-txt').textContent = L().savedTxt(State.level, State.kills);
+    }
+
+    function goBackSmart() {
+      const craftOpen = !document.getElementById('craft-modal').classList.contains('hidden');
+      if (craftOpen) { toggleCraftModal(false); return; }
+      const lobbyOpen = !document.getElementById('lobby-modal').classList.contains('hidden');
+      if (lobbyOpen) {
+        if (State.mode === 'group' && !document.getElementById('group-panel').classList.contains('hidden')) { pickMode('solo'); return; }
+        if (State.sceneReady) launchGame();
+        return;
+      }
+      openLobby();
+    }
+
+    function requestLock() {
+      if (isTouchDevice() || !State.running) return;
+      if (performance.now() < pointerLockCooldownUntil) return;
+      try {
+        if (!renderer || !renderer.domElement || typeof renderer.domElement.requestPointerLock !== 'function') return;
+        if (document.pointerLockElement === renderer.domElement) return;
+        const res = renderer.domElement.requestPointerLock();
+        if (res && typeof res.catch === 'function') res.catch(() => { pointerLockCooldownUntil = performance.now() + 1200; });
+      } catch (e) { pointerLockCooldownUntil = performance.now() + 1200; }
+    }
+
+    function renderHotbar() {
+      const row = document.getElementById('hotbar-row');
+      const lbl = document.getElementById('active-item-name');
+      if (!row) return;
+      row.innerHTML = '';
+
+      State.hotbar.forEach((slot, idx) => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'hotbar-slot' + (idx === State.slot ? ' active' : '');
+        btn.onclick = () => { State.slot = idx; renderHotbar(); rebuildHandModel(); };
+
+        if (slot && slot.id && slot.count > 0 && ITEMS[slot.id]) {
+          const item = ITEMS[slot.id];
+          btn.innerHTML = `<span class="text-lg sm:text-xl">${item.icon}</span>` +
+            (slot.count > 1 ? `<span class="absolute bottom-0.5 right-1 text-[10px] font-black text-white drop-shadow">${slot.count}</span>` : '');
+        }
+        row.appendChild(btn);
+      });
+
+      const cur = heldSlot();
+      if (lbl) {
+        lbl.textContent = (cur && cur.id && cur.count > 0 && ITEMS[cur.id])
+          ? `${L().items[cur.id] || cur.id}${cur.count > 1 ? ' ×' + cur.count : ''}`
+          : '';
+      }
+      rebuildHandModel();
+    }
+
+    function updateHud() {
+      document.getElementById('hud-name').textContent = State.name;
+      document.getElementById('hud-mode').textContent = State.mode === 'group' ? `${L().groupBadge}: ${State.code}` : L().soloBadge;
+      document.getElementById('hud-level').textContent = L().levelTxt(State.level);
+      document.getElementById('hud-wave').textContent = `(${State.waveKills}/${State.waveGoal})`;
+      const coinsEl = document.getElementById('hud-coins');
+      if (coinsEl) coinsEl.textContent = `${State.coins || 0}🪙`;
+
+      const peaceBadge = document.getElementById('hud-peace-badge');
+      if (peaceBadge) {
+        if (State.combatUnlocked) {
+          peaceBadge.textContent = '⚔️ Luftë Aktive';
+          peaceBadge.className = 'ba-panel px-2.5 py-1.5 rounded-xl text-xs font-black text-rose-300';
+        } else {
+          peaceBadge.textContent = '🕊️ Paqe: Mblidh Fruta & Peshko';
+          peaceBadge.className = 'ba-panel px-2.5 py-1.5 rounded-xl text-xs font-black text-sky-300';
+        }
+      }
+
+      const heartsEl = document.getElementById('hearts-row');
+      const totalHearts = Math.floor(maxHpNow() / 2);
+      let heartsHtml = '';
+      for (let i = 0; i < totalHearts; i++) {
+        const hHp = State.hp - i * 2;
+        const isGold = i >= 10;
+        if (hHp >= 2) heartsHtml += `<span>${isGold ? '💖' : '❤️'}</span>`;
+        else if (hHp >= 1) heartsHtml += `<span>🧡</span>`;
+        else heartsHtml += `<span class="opacity-30">🖤</span>`;
+      }
+      heartsEl.innerHTML = heartsHtml;
+
+      const gaBadge = document.getElementById('hud-goldapple-badge');
+      if (hasGoldHearts()) {
+        gaBadge.classList.remove('hidden');
+        document.getElementById('hud-ga-time').textContent = `${Math.max(1, Math.ceil((State.gaUntil - Date.now()) / 1000))}s`;
+      } else {
+        gaBadge.classList.add('hidden');
+      }
+
+      const sp = Math.round(State.swordPower);
+      document.getElementById('sword-power-bar').style.width = `${sp}%`;
+      document.getElementById('sword-power-pct').textContent = `${sp}%`;
+    }
+
+    function setLang(lang) {
+      if (!I18N[lang]) return;
+      currentLang = lang;
+      const d = L();
+      document.getElementById('ui-sub').textContent = d.sub;
+      document.getElementById('btn-lobby-back').textContent = d.backBtn;
+      document.getElementById('btn-group-back').textContent = d.backBtn;
+      document.getElementById('btn-hud-back').textContent = d.backBtn;
+      document.getElementById('ui-name-lbl').textContent = d.nameLbl;
+      document.getElementById('ui-mode-lbl').textContent = d.modeLbl;
+      document.getElementById('ui-solo-t').textContent = d.soloT;
+      document.getElementById('ui-solo-d').textContent = d.soloD;
+      document.getElementById('ui-group-t').textContent = d.groupT;
+      document.getElementById('ui-group-d').textContent = d.groupD;
+      document.getElementById('ui-code-lbl').textContent = d.codeLbl;
+      document.getElementById('ui-host-btn').textContent = d.hostBtn;
+      document.getElementById('ui-join-btn').textContent = d.joinBtn;
+      document.getElementById('ui-gen-btn').textContent = d.genBtn;
+      document.getElementById('ui-copy-btn').textContent = d.copyBtn;
+      document.getElementById('btn-start').textContent = d.playBtn;
+      document.getElementById('btn-reset-save').textContent = d.resetBtn;
+      document.getElementById('hud-craft-lbl').textContent = d.craftHud;
+      document.getElementById('t-jump-btn').textContent = d.jumpTxt;
+      document.getElementById('t-use-btn').textContent = d.useTxt;
+      document.getElementById('t-hit-btn').textContent = d.hitTxt;
+      document.getElementById('tab-btn-craft').textContent = d.tabCraft;
+      document.getElementById('tab-btn-furnace').textContent = d.tabFurnace;
+      document.getElementById('ui-soba-t').textContent = d.sobaT;
+      document.getElementById('ui-soba-d').textContent = d.sobaD;
+      document.getElementById('btn-smelt').textContent = d.smeltBtn;
+      document.getElementById('go-title').textContent = d.goTitle;
+      document.getElementById('go-respawn-btn').textContent = d.goRespawn;
+      document.getElementById('go-menu-btn').textContent = d.goMenu;
+
+      if (!document.getElementById('save-banner').classList.contains('hidden')) {
+        document.getElementById('save-banner-txt').textContent = d.savedTxt(State.level, State.kills);
+      }
+      document.querySelectorAll('[data-lang]').forEach(btn => {
+        btn.className = btn.getAttribute('data-lang') === lang
+          ? 'px-1.5 py-1 rounded-lg text-[10px] font-black bg-emerald-400 text-slate-950 cursor-pointer'
+          : 'px-1.5 py-1 rounded-lg text-[10px] font-bold text-slate-300 hover:text-white cursor-pointer';
+      });
+      refreshGroupStatus(); renderCraftUI(); renderHotbar(); updateHud();
+    }
+
+    function initScene() {
+      if (State.sceneReady || typeof window.THREE === 'undefined' || window.__threeFailed) return false;
+      try {
+        boxGeo = new THREE.BoxGeometry(1, 1, 1);
+        playerPos = new THREE.Vector3(0, 8, 12);
+        playerVel = new THREE.Vector3(0, 0, 0);
+
+        const canvas = document.getElementById('game-canvas');
+        renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+        renderer.setSize(window.innerWidth, window.innerHeight);
+
+        scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x38bdf8);
+        scene.fog = new THREE.FogExp2(0x38bdf8, 0.014);
+
+        camera = new THREE.PerspectiveCamera(72, window.innerWidth / window.innerHeight, 0.1, 140);
+        camera.rotation.order = 'YXZ';
+        scene.add(camera);
+
+        handPivot = new THREE.Group();
+        handPivot.position.set(0.34, -0.28, -0.45);
+        const forearm = new THREE.Mesh(
+          new THREE.BoxGeometry(0.14, 0.14, 0.36),
+          new THREE.MeshStandardMaterial({ color: 0xfdba74, roughness: 0.65 })
+        );
+        handItemGroup = new THREE.Group();
+        handPivot.add(forearm, handItemGroup);
+        camera.add(handPivot);
+
+        playerThirdPersonMesh = makeDoll({ skin: 0xfdba74, armor: 0x059669, accent: 0x34d399, pants: 0x1e293b, visor: 0x34d399 });
+        playerThirdPersonMesh.visible = false;
+        scene.add(playerThirdPersonMesh);
+
+        hemiLight = new THREE.HemisphereLight(0xe0f2fe, 0x334155, 0.95);
+        scene.add(hemiLight);
+
+        sunLight = new THREE.DirectionalLight(0xfffbeb, 1.05);
+        sunLight.position.set(22, 36, 18);
+        scene.add(sunLight);
+
+        targetBox = new THREE.LineSegments(
+          new THREE.EdgesGeometry(new THREE.BoxGeometry(1.03, 1.03, 1.03)),
+          new THREE.LineBasicMaterial({ color: 0x0f172a })
+        );
+        targetBox.visible = false;
+        scene.add(targetBox);
+
+        initMaterials();
+        buildWorld();
+        spawnMobsAndPlayers();
+        rebuildHandModel();
+
+        playerPos.set(0, terrainY(0, 12) + 1.8, 12);
+        camera.position.copy(playerPos);
+
+        window.addEventListener('resize', () => {
+          if (!renderer || !camera) return;
+          camera.aspect = window.innerWidth / window.innerHeight;
+          camera.updateProjectionMatrix();
+          renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        State.sceneReady = true;
+        requestAnimationFrame(loop);
+        return true;
+      } catch (err) { return false; }
+    }
+
+    function launchGame() {
+      try {
+        SFX.init();
+        const rawName = (document.getElementById('input-name').value || '').trim();
+        State.name = rawName || 'ArenaHero';
+        if (State.mode === 'group') {
+          const rawCode = (document.getElementById('input-code').value || '').trim().toUpperCase();
+          State.code = (rawCode || 'B7K4P').slice(0, 5);
+          document.getElementById('input-code').value = State.code;
+          connectGroupChannel();
+        }
+        if (!State.sceneReady) initScene();
+        if (State.hp <= 0) State.hp = maxHpNow();
+        State.running = true;
+
+        document.getElementById('lobby-modal').classList.add('hidden');
+        document.getElementById('gameover-modal').classList.add('hidden');
+        document.getElementById('gameover-modal').classList.remove('flex');
+        document.getElementById('hud-top').classList.remove('hidden');
+        document.getElementById('hud-top').classList.add('flex');
+        document.getElementById('hud-bottom').classList.remove('hidden');
+        document.getElementById('hud-bottom').classList.add('flex');
+        document.getElementById('crosshair').classList.remove('hidden');
+
+        if (isTouchDevice()) {
+          document.getElementById('touch-ui').classList.remove('hidden');
+          document.getElementById('touch-ui').classList.add('flex');
+        } else {
+          requestLock();
+        }
+        renderHotbar(); updateHud(); saveProgress();
+      } catch (e) {}
+    }
+
+    const keys = {};
+    let lastWTap = 0, doubleTapSprint = false;
+
+    function triggerJump() {
+      if (!State.running || !playerVel) return;
+      if (swimming) playerVel.y = 5.6;
+      else if (grounded) { playerVel.y = 8.4; grounded = false; }
+    }
+
+    function bindControls() {
+      window.addEventListener('keydown', e => {
+        if (e.code === 'KeyW' && !keys['KeyW']) {
+          const now = performance.now();
+          if (now - lastWTap < 280) doubleTapSprint = true;
+          lastWTap = now;
+        }
+        keys[e.code] = true;
+
+        if (e.code === 'KeyE') {
+          const isClosed = document.getElementById('craft-modal').classList.contains('hidden');
+          if (State.running || !isClosed) toggleCraftModal(isClosed);
+        } else if (e.code === 'Tab' && State.running) {
+          e.preventDefault();
+          const tabEl = document.getElementById('tab-overlay');
+          tabEl.classList.remove('hidden');
+          document.getElementById('tab-lvl-badge').textContent = L().levelTxt(State.level);
+          const list = [
+            `🟢 ${State.name} (${L().levelTxt(State.level)})`,
+            ...Array.from(remotePlayers.values()).map(p => `🔵 ${p.name}`)
+          ];
+          document.getElementById('tab-players-list').innerHTML = list.map(x => `<div>${x}</div>`).join('');
+        }
+
+        if (!State.running) return;
+        if (e.code.startsWith('Digit')) {
+          const n = parseInt(e.code.replace('Digit', ''), 10);
+          if (n >= 1 && n <= 9) { State.slot = n - 1; renderHotbar(); }
+        } else if (e.code === 'Space') triggerJump();
+        else if (e.code === 'KeyV') toggleVoiceChat();
+        else if (e.code === 'KeyF') primaryAction();
+        else if (e.code === 'KeyR' || e.code === 'KeyQ') secondaryAction();
+        else if (e.code === 'KeyB') SFX.horn();
+        else if (e.code === 'KeyP') toggleSiren();
+        else if (e.code === 'KeyH') {
+          State.thirdPerson = !State.thirdPerson;
+          if (playerThirdPersonMesh) playerThirdPersonMesh.visible = State.thirdPerson;
+          if (handPivot) handPivot.visible = !State.thirdPerson;
+        }
+      });
+
+      window.addEventListener('keyup', e => {
+        keys[e.code] = false;
+        if (e.code === 'KeyW') doubleTapSprint = false;
+        if (e.code === 'Tab') document.getElementById('tab-overlay').classList.add('hidden');
+      });
+
+      window.addEventListener('wheel', e => {
+        if (!State.running) return;
+        State.slot = (State.slot + (e.deltaY > 0 ? 1 : -1) + 9) % 9;
+        renderHotbar();
+      }, { passive: true });
+
+      let draggingLook = false, lastX = 0, lastY = 0;
+
+      window.addEventListener('mousedown', e => {
+        if (!State.running) return;
+        if (e.target && e.target.closest('button, input, .ba-panel')) return;
+        if (!document.pointerLockElement && !isTouchDevice()) requestLock();
+        draggingLook = true; lastX = e.clientX; lastY = e.clientY;
+        if (e.button === 0) primaryAction();
+        else if (e.button === 2) secondaryAction();
+      });
+
+      window.addEventListener('mouseup', () => { draggingLook = false; });
+      window.addEventListener('contextmenu', e => { if (State.running) e.preventDefault(); });
+
+      window.addEventListener('mousemove', e => {
+        if (!State.running) return;
+        let dx = 0, dy = 0;
+        if (document.pointerLockElement) { dx = e.movementX || 0; dy = e.movementY || 0; }
+        else if (draggingLook) { dx = e.clientX - lastX; dy = e.clientY - lastY; lastX = e.clientX; lastY = e.clientY; }
+        yaw -= dx * 0.0024;
+        pitch = Math.max(-1.42, Math.min(1.42, pitch - dy * 0.0024));
+      });
+
+      window.addEventListener('touchstart', e => {
+        if (!State.running || !e.touches.length) return;
+        if (e.target && e.target.closest('button, .ba-panel')) return;
+        lastX = e.touches[0].clientX; lastY = e.touches[0].clientY;
+      }, { passive: true });
+
+      window.addEventListener('touchmove', e => {
+        if (!State.running || !e.touches.length) return;
+        if (e.target && e.target.closest('button, .ba-panel')) return;
+        const tx = e.touches[0].clientX, ty = e.touches[0].clientY;
+        yaw -= (tx - lastX) * 0.0052;
+        pitch = Math.max(-1.42, Math.min(1.42, pitch - (ty - lastY) * 0.0052));
+        lastX = tx; lastY = ty;
+      }, { passive: true });
+
+      document.querySelectorAll('.touch-pad').forEach(btn => {
+        const k = btn.getAttribute('data-key');
+        btn.addEventListener('touchstart', e => { e.preventDefault(); keys[k] = true; }, { passive: false });
+        btn.addEventListener('touchend', e => { e.preventDefault(); keys[k] = false; }, { passive: false });
+      });
+    }
+
+    function stepDayNight(dt) {
+      State.worldTime = (State.worldTime + dt * 0.012) % 1;
+      const dayFactor = Math.max(0.22, Math.sin(State.worldTime * Math.PI));
+      const skyHex = dayFactor > 0.45 ? 0x38bdf8 : dayFactor > 0.28 ? 0xf97316 : 0x0f172a;
+      scene.background.setHex(skyHex);
+      scene.fog.color.setHex(skyHex);
+      sunLight.intensity = 0.35 + dayFactor * 0.85;
+      hemiLight.intensity = 0.45 + dayFactor * 0.6;
+    }
+
+    function hasSolidBlockAt(x, y, z) {
+      const item = blocks.get(bKey(Math.round(x), Math.round(y), Math.round(z)));
+      return !!(item && item.type !== 'water');
+    }
+
+    function getStandingFloorY(x, z, curEyeY) {
+      const rx = Math.round(x), rz = Math.round(z);
+      const eyeOffset = State.crouching ? 1.2 : 1.75;
+      const feetY = curEyeY - eyeOffset;
+      const startCheckY = Math.min(18, Math.floor(feetY + 0.6));
+      for (let y = startCheckY; y >= -5; y--) {
+        const b = blocks.get(bKey(rx, y, rz));
+        if (b && b.type !== 'water') {
+          return y + 0.5 + eyeOffset;
+        }
+      }
+      return -4 + 0.5 + eyeOffset;
+    }
+
+    function hasWaterAt(x, y, z) {
+      const item = blocks.get(bKey(Math.round(x), Math.round(y), Math.round(z)));
+      if (item && item.type === 'water') return true;
+      for (const p of puddles) {
+        if (Math.hypot(x - p.x, z - p.z) <= 2.95 && Math.abs(y - p.y) <= 2.2) {
+          return true;
+        }
+      }
+      return false;
+    }
+
+    function stepPlayer(dt) {
+      const fwd = (keys['KeyW'] ? 1 : 0) - (keys['KeyS'] ? 1 : 0);
+      const str = (keys['KeyD'] ? 1 : 0) - (keys['KeyA'] ? 1 : 0);
+
+      const forwardVec = new THREE.Vector3(-Math.sin(yaw), 0, -Math.cos(yaw));
+      const rightVec = new THREE.Vector3(Math.cos(yaw), 0, -Math.sin(yaw));
+      const wish = new THREE.Vector3().addScaledVector(forwardVec, fwd).addScaledVector(rightVec, str);
+      if (wish.lengthSq() > 1) wish.normalize();
+
+      State.crouching = !!(keys['ShiftLeft'] || keys['ShiftRight']);
+      const sprintHeld = keys['ControlLeft'] || doubleTapSprint;
+      const sprint = State.crouching ? 0.55 : (sprintHeld && wish.length() > 0.1 ? 1.42 : 1.0);
+
+      swimming = hasWaterAt(playerPos.x, playerPos.y - 0.6, playerPos.z) || hasWaterAt(playerPos.x, playerPos.y - 1.5, playerPos.z);
+      document.getElementById('underwater-tint').style.opacity = swimming ? '1' : '0';
+
+      const vehDef = State.ridingVehicle ? ITEMS[State.ridingVehicle] : null;
+      const onWaterBoat = State.ridingVehicle === 'boat' && swimming;
+      const baseSpd = onWaterBoat ? 12.5 : (vehDef ? vehDef.speed : (swimming ? 4.2 : 6.8));
+      const spd = baseSpd * sprint;
+      if (vehDef && wish.length() > 0.1) {
+        SFX.engineTick += dt;
+        if (SFX.engineTick > 0.16) { SFX.engineTick = 0; SFX.engineHum(sprint > 1.1 ? 1.4 : 0.9); }
+      }
+      playerVel.x = wish.x * spd; playerVel.z = wish.z * spd;
+      playerVel.y = onWaterBoat ? 0 : (swimming ? Math.max(-2.2, playerVel.y - 4.0 * dt) : playerVel.y - 21.5 * dt);
+
+      const nextX = Math.max(-25, Math.min(25, playerPos.x + playerVel.x * dt));
+      if (!hasSolidBlockAt(nextX, playerPos.y - 0.8, playerPos.z) && !hasSolidBlockAt(nextX, playerPos.y - 0.1, playerPos.z)) playerPos.x = nextX;
+
+      const nextZ = Math.max(-25, Math.min(25, playerPos.z + playerVel.z * dt));
+      if (!hasSolidBlockAt(playerPos.x, playerPos.y - 0.8, nextZ) && !hasSolidBlockAt(playerPos.x, playerPos.y - 0.1, nextZ)) playerPos.z = nextZ;
+
+      const prevY = playerPos.y;
+      playerPos.y += playerVel.y * dt;
+      const floorY = onWaterBoat ? 2.15 : getStandingFloorY(playerPos.x, playerPos.z, playerPos.y);
+
+      if (!grounded && !swimming) {
+        if (!wasAirborne) {
+          wasAirborne = true;
+          fallStartY = Math.max(prevY, playerPos.y);
+        } else if (playerPos.y > fallStartY) {
+          fallStartY = playerPos.y;
+        }
+      } else if (swimming) {
+        wasAirborne = false;
+        fallStartY = null;
+      }
+
+      if (playerPos.y <= floorY && playerVel.y <= 0) {
+        const landedFromAir = !grounded;
+        playerPos.y = floorY;
+        playerVel.y = 0;
+        grounded = true;
+
+        const safeWaterLanding = swimming || hasWaterAt(playerPos.x, floorY - 1.5, playerPos.z) || hasWaterAt(playerPos.x, floorY - 0.4, playerPos.z);
+        if (!safeWaterLanding && landedFromAir && wasAirborne && fallStartY !== null) {
+          const fallDist = fallStartY - playerPos.y;
+          if (fallDist >= 3.2) {
+            const fallDmg = Math.max(2, Math.round((fallDist - 2.4) * 1.5));
+            hurtPlayer(fallDmg, 'player', true);
+          }
+        }
+        wasAirborne = false;
+        fallStartY = null;
+      } else if (playerPos.y > floorY + 0.08 && !swimming) {
+        grounded = false;
+      }
+
+      if (State.ridingVehicle) {
+        const pv = parkedVehicles.find(v => v.id === State.ridingVehicle);
+        if (pv) {
+          pv.mesh.position.set(playerPos.x, playerPos.y - 1.2, playerPos.z);
+          pv.mesh.rotation.y = yaw + Math.PI;
+        }
+      }
+
+      if (playerThirdPersonMesh) {
+        playerThirdPersonMesh.position.set(playerPos.x, playerPos.y - 1.75, playerPos.z);
+        playerThirdPersonMesh.rotation.y = yaw + Math.PI;
+      }
+
+      if (State.thirdPerson) {
+        const camOffset = new THREE.Vector3(Math.sin(yaw) * 3.6, 1.35, Math.cos(yaw) * 3.6);
+        camera.position.copy(playerPos).add(camOffset);
+      } else {
+        camera.position.copy(playerPos);
+      }
+      camera.rotation.y = yaw;
+      camera.rotation.x = pitch;
+
+      return Math.min(1, wish.length() * sprint);
+    }
+
+    function stepTargetOutline() {
+      if (!targetBox || !camera) return;
+      const dir = new THREE.Vector3(0, 0, -1).applyEuler(new THREE.Euler(pitch, yaw, 0, 'YXZ'));
+      const ray = new THREE.Raycaster(camera.position, dir, 0, 5.2);
+      const hits = ray.intersectObjects(Array.from(blocks.values()).map(v => v.mesh), false);
+      if (hits.length > 0 && hits[0].object.userData && hits[0].object.userData.type !== 'water') {
+        const ud = hits[0].object.userData;
+        targetBox.position.set(ud.gx, ud.gy, ud.gz);
+        targetBox.visible = true;
+      } else {
+        targetBox.visible = false;
+      }
+    }
+
+    function stepCrates(now) {
+      for (const c of chests) {
+        if (!c.active && now >= c.respawnAt && playerPos && c.origin.distanceTo(playerPos) > 4.0) {
+          c.active = true; c.mesh.visible = true;
+        }
+        if (c.active) c.mesh.rotation.y += 0.015;
+      }
+    }
+
+    function stepPuddles(now) {
+      for (let i = puddles.length - 1; i >= 0; i--) {
+        const p = puddles[i];
+        if (now >= p.expiresAt) { scene.remove(p.mesh); puddles.splice(i, 1); continue; }
+        for (const m of mobs) {
+          if (Math.hypot(m.mesh.position.x - p.x, m.mesh.position.z - p.z) < 2.8) m.slowUntil = now + 900;
+        }
+      }
+    }
+
+    function stepPearls(dt, now) {
+      for (let i = pearls.length - 1; i >= 0; i--) {
+        const p = pearls[i];
+        p.vel.y -= 16 * dt;
+        p.mesh.position.addScaledVector(p.vel, dt);
+        const gy = terrainY(Math.round(p.mesh.position.x), Math.round(p.mesh.position.z)) + 1.75;
+        if (p.mesh.position.y <= gy || now - p.bornAt > 1800) {
+          playerPos.set(Math.max(-24, Math.min(24, p.mesh.position.x)), gy, Math.max(-24, Math.min(24, p.mesh.position.z)));
+          playerVel.set(0, 0, 0);
+          scene.remove(p.mesh); pearls.splice(i, 1);
+          SFX.pop(720, 420, 0.14);
+        }
+      }
+    }
+
+    function stepArrows(dt, now) {
+      for (let i = arrows.length - 1; i >= 0; i--) {
+        const a = arrows[i];
+        a.mesh.position.addScaledVector(a.vel, dt);
+        if (playerPos && a.mesh.position.distanceTo(playerPos) < 1.15) {
+          hurtPlayer(1.5, 'monkey');
+          scene.remove(a.mesh); arrows.splice(i, 1);
+          continue;
+        }
+        if (now - a.bornAt > 3000) { scene.remove(a.mesh); arrows.splice(i, 1); }
+      }
+    }
+
+    function stepMobs(dt, now) {
+      if (!playerPos) return;
+      for (const m of mobs) {
+        if (m.cd > 0) m.cd -= dt;
+        const slowFactor = now < (m.slowUntil || 0) ? 0.42 : 1.0;
+        const spd = m.spd * slowFactor;
+
+        if (m.inTree) {
+          m.mesh.lookAt(playerPos.x, m.mesh.position.y, playerPos.z);
+          if (State.combatUnlocked && m.mesh.position.distanceTo(playerPos) < 16 && m.cd <= 0) {
+            m.cd = 3.2;
+            const nut = new THREE.Mesh(new THREE.SphereGeometry(0.16, 8, 8), new THREE.MeshStandardMaterial({ color: 0x78350f }));
+            nut.position.copy(m.mesh.position).add(new THREE.Vector3(0, 0.5, 0));
+            const aim = playerPos.clone().sub(nut.position).normalize();
+            scene.add(nut);
+            arrows.push({ mesh: nut, vel: aim.multiplyScalar(14), bornAt: now });
+          }
+          continue;
+        }
+
+        const toP = new THREE.Vector3(playerPos.x - m.mesh.position.x, 0, playerPos.z - m.mesh.position.z);
+        const dist = toP.length();
+        const aggro = State.combatUnlocked && m.kind !== 'food_animal' && dist < 22;
+
+        let moveDir = null;
+        if (aggro) {
+          if (dist > 1.55) moveDir = toP.clone().normalize();
+          if (dist <= 1.85 && m.cd <= 0) { m.cd = 1.9; hurtPlayer(m.dmg || 1.5, m.kind); }
+        } else {
+          m.wanderTimer = (m.wanderTimer || 0) - dt;
+          if (m.wanderTimer <= 0) {
+            m.wanderTimer = 2.0 + Math.random() * 2.5;
+            m.wanderAngle = Math.random() * Math.PI * 2;
+          }
+          moveDir = new THREE.Vector3(Math.sin(m.wanderAngle), 0, Math.cos(m.wanderAngle));
+        }
+
+        if (moveDir) {
+          const nx = m.mesh.position.x + moveDir.x * spd * dt;
+          const nz = m.mesh.position.z + moveDir.z * spd * dt;
+          const curY = Math.round(m.mesh.position.y);
+          const blocked = Math.abs(nx) > 25 || Math.abs(nz) > 25 || isLakeCoord(Math.round(nx), Math.round(nz)) ||
+                          hasSolidBlockAt(nx, curY, nz) || hasSolidBlockAt(nx, curY + 1, nz);
+          if (!blocked) {
+            m.mesh.position.x = nx;
+            m.mesh.position.z = nz;
+            m.mesh.rotation.y = Math.atan2(moveDir.x, moveDir.z);
+            m.phase += dt * 6.5;
+          } else {
+            m.wanderAngle += Math.PI * 0.65;
+          }
+        }
+
+        const gy = terrainY(Math.round(m.mesh.position.x), Math.round(m.mesh.position.z)) + 0.5;
+        m.mesh.position.y += (gy - m.mesh.position.y) * Math.min(1, dt * 12);
+
+        const rig = m.mesh.userData.rig;
+        if (rig) {
+          const sw = Math.sin(m.phase) * 0.45;
+          rig.lLeg.rotation.x = sw; rig.rLeg.rotation.x = -sw;
+          if (rig.bLLeg) { rig.bLLeg.rotation.x = -sw; rig.bRLeg.rotation.x = sw; }
+          if (rig.hpBar && rig.hpBar.sprite && camera) rig.hpBar.sprite.lookAt(camera.position);
+        }
+      }
+    }
+
+    let zoneHealAccum = 0, shopPromptCooldown = 0;
+    function stepLakeFishes(dt) {
+      for (const f of lakeFishes) {
+        f.angle += f.speed * dt;
+        const nx = 16 + Math.cos(f.angle) * f.radius;
+        const nz = 12 + Math.sin(f.angle) * f.radius;
+        f.mesh.position.set(nx, 0.72 + Math.sin(f.angle * 3) * 0.12, nz);
+        f.mesh.rotation.y = -f.angle;
+        if (f.tail) f.tail.rotation.y = Math.sin(f.angle * 12) * 0.45;
+      }
+    }
+
+    function stepHospitalAndRestaurant(dt) {
+      if (!playerPos) return;
+      if (shopPromptCooldown > 0) shopPromptCooldown -= dt;
+
+      const distShop = Math.hypot(playerPos.x - 0, playerPos.z - 3);
+      if (distShop < 2.8 && shopPromptCooldown <= 0 && document.getElementById('craft-modal').classList.contains('hidden')) {
+        shopPromptCooldown = 6.0;
+        toggleShopModal(true);
+        return;
+      }
+
+      const distHosp = Math.hypot(playerPos.x - 14, playerPos.z - 4);
+      if (distHosp < 4.5 && State.hp < maxHpNow()) {
+        zoneHealAccum += dt;
+        if (zoneHealAccum >= 0.8) {
+          zoneHealAccum = 0;
+          State.hp = Math.min(maxHpNow(), State.hp + 2);
+          SFX.pop(520, 780, 0.08);
+          updateHud();
+        }
+        return;
+      }
+
+      const distRest = Math.hypot(playerPos.x + 14, playerPos.z - 4);
+      if (distRest < 5.0 && State.hp < maxHpNow()) {
+        zoneHealAccum += dt;
+        if (zoneHealAccum >= 0.9) {
+          zoneHealAccum = 0;
+          State.hp = Math.min(maxHpNow(), State.hp + 2);
+          SFX.pop(460, 720, 0.08);
+          updateHud();
+        }
+      }
+    }
+
+    let lastNetSync = 0, lastAutoSave = 0;
+    function loop(now) {
+      requestAnimationFrame(loop);
+      try {
+        const dt = Math.min(0.05, (now - (loop._prev || now)) / 1000);
+        loop._prev = now;
+
+        if (State.running && scene && renderer && camera && playerPos) {
+          if (State.attackCd > 0) {
+            State.attackCd = Math.max(0, State.attackCd - dt);
+            document.getElementById('atk-cd-bar').style.opacity = '1';
+            document.getElementById('atk-cd-fill').style.width = `${Math.round((1 - State.attackCd / 0.45) * 100)}%`;
+          } else {
+            document.getElementById('atk-cd-bar').style.opacity = '0';
+          }
+
+          if (State.hp < maxHpNow() && now - State.lastCombatAt > 6500) {
+            State.regenAccum += dt;
+            if (State.regenAccum >= 4.0) { State.regenAccum = 0; State.hp = Math.min(maxHpNow(), State.hp + 1); updateHud(); }
+          } else { State.regenAccum = 0; }
+
+          stepDayNight(dt);
+          const spdRatio = stepPlayer(dt);
+          stepCoinPickups();
+          stepLakeFishes(dt);
+          stepHospitalAndRestaurant(dt);
+          updateHandAnimation(dt, spdRatio);
+          stepTargetOutline();
+          stepCrates(now);
+          stepPuddles(now);
+          stepPearls(dt, now);
+          stepArrows(dt, now);
+          stepMobs(dt, now);
+          if (hasGoldHearts()) updateHud();
+
+          if (State.mode === 'group' && now - lastNetSync > 90) {
+            lastNetSync = now;
+            broadcastNet({ type: 'state', name: State.name, x: Math.round(playerPos.x * 100) / 100, y: Math.round(playerPos.y * 100) / 100, z: Math.round(playerPos.z * 100) / 100, yaw: Math.round(yaw * 100) / 100 });
+          }
+          if (now - lastAutoSave > 6000) { lastAutoSave = now; saveProgress(); }
+        }
+        if (renderer && scene && camera) renderer.render(scene, camera);
+      } catch (e) {}
+    }
+
+    window.addEventListener('beforeunload', () => {
+      try { if (State.running) saveProgress(); if (State.mode === 'group') broadcastNet({ type: 'leave' }); } catch (e) {}
+    });
+
+    window.addEventListener('load', () => {
+      try { bindControls(); setLang('sq'); loadSavedProgress(); initScene(); } catch (e) {}
+    });
+  </script>
+</body>
+</html>
